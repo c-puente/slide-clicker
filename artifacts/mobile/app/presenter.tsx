@@ -403,7 +403,7 @@ export default function PresenterScreen() {
               hitSlop={10}
               style={({ pressed }) => [styles.shareBtn, { opacity: pressed ? 0.5 : 1 }]}
             >
-              <Feather name="upload" size={14} color={textSecondary} />
+              <Feather name="external-link" size={14} color={textSecondary} />
             </Pressable>
           </View>
 
