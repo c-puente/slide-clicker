@@ -4,9 +4,11 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  KeyboardAvoidingView,
   Keyboard,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,6 +27,7 @@ export default function AudienceScreen() {
     totalAudience,
     presence,
     voteNext,
+    unvoteNext,
     leaveSession,
     sendNote,
   } = useSession();
@@ -37,7 +40,10 @@ export default function AudienceScreen() {
   const [hasVoted, setHasVoted] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
-  const [noteSent, setNoteSent] = useState(false);
+  const [briefSent, setBriefSent] = useState(false);
+
+  const [noteCooldown, setNoteCooldown] = useState(false);
+  const notesSentRef = useRef(0);
   const noteAnim = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(1)).current;
   const checkAnim = useRef(new Animated.Value(0)).current;
@@ -56,14 +62,22 @@ export default function AudienceScreen() {
     Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: true }).start();
   }, [slideNumber]);
 
+  const closeNoteBar = () => {
+    setNoteOpen(false);
+    Keyboard.dismiss();
+    Animated.spring(noteAnim, {
+      toValue: 0,
+      tension: 260,
+      friction: 26,
+      useNativeDriver: false,
+    }).start();
+  };
+
   const toggleNote = () => {
+    if (noteCooldown) return;
     const opening = !noteOpen;
     setNoteOpen(opening);
-    if (opening) {
-      setNoteSent(false);
-    } else {
-      Keyboard.dismiss();
-    }
+    if (!opening) Keyboard.dismiss();
     Animated.spring(noteAnim, {
       toValue: opening ? 1 : 0,
       tension: 260,
@@ -73,25 +87,44 @@ export default function AudienceScreen() {
   };
 
   const handleSendNote = () => {
-    if (!noteText.trim()) return;
+    if (!noteText.trim() || noteCooldown) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     sendNote(noteText.trim());
     setNoteText("");
-    setNoteSent(true);
+    setBriefSent(true);
     Keyboard.dismiss();
-    setTimeout(() => toggleNote(), 1200);
+
+    const count = notesSentRef.current + 1;
+    notesSentRef.current = count;
+
+    setTimeout(() => setBriefSent(false), 700);
+
+    if (count >= 2) {
+      notesSentRef.current = 0;
+      setTimeout(() => {
+        closeNoteBar();
+        setNoteCooldown(true);
+        setTimeout(() => setNoteCooldown(false), 2000);
+      }, 700);
+    }
   };
 
   const handleVote = () => {
-    if (hasVoted) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    setHasVoted(true);
-    voteNext();
-    Animated.sequence([
-      Animated.timing(pressAnim, { toValue: 0.96, duration: 80, useNativeDriver: true }),
-      Animated.timing(pressAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-    ]).start();
-    Animated.timing(checkAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    if (hasVoted) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setHasVoted(false);
+      unvoteNext();
+      Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      setHasVoted(true);
+      voteNext();
+      Animated.sequence([
+        Animated.timing(pressAnim, { toValue: 0.96, duration: 80, useNativeDriver: true }),
+        Animated.timing(pressAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+      ]).start();
+      Animated.timing(checkAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    }
   };
 
   const bg = isDark ? "#0d0b08" : "#f4f1ec";
@@ -107,15 +140,22 @@ export default function AudienceScreen() {
 
   return (
     <Animated.View style={[styles.flex, { backgroundColor: bg, opacity: fadeIn }]}>
-      <View
-        style={[
-          styles.container,
-          {
-            paddingTop: Platform.OS === "web" ? 60 + insets.top : insets.top + 16,
-            paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 20,
-          },
-        ]}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={[
+            styles.container,
+            {
+              paddingTop: Platform.OS === "web" ? 60 + insets.top : insets.top + 16,
+              paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 20,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.topBar}>
           <Pressable
             onPress={() => { leaveSession(); router.replace("/"); }}
@@ -149,7 +189,6 @@ export default function AudienceScreen() {
         <Animated.View style={{ transform: [{ scale: pressAnim }] }}>
           <Pressable
             onPress={handleVote}
-            disabled={hasVoted}
             style={[
               styles.voteButton,
               {
@@ -188,7 +227,7 @@ export default function AudienceScreen() {
                 { color: hasVoted ? `${accent}99` : "rgba(254,252,248,0.65)" },
               ]}
             >
-              {hasVoted ? "Waiting for presenter" : "Tap to signal the presenter"}
+              {hasVoted ? "Tap again to cancel" : "Tap to signal the presenter"}
             </Text>
           </Pressable>
         </Animated.View>
@@ -222,7 +261,9 @@ export default function AudienceScreen() {
             styles.noteBar,
             {
               backgroundColor: surface,
-              borderColor: noteOpen ? accent : inputBorder,
+              borderColor: noteCooldown
+                ? isDark ? "rgba(237,233,225,0.06)" : "rgba(26,22,18,0.06)"
+                : noteOpen ? accent : inputBorder,
               height: noteAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [44, 126],
@@ -230,51 +271,60 @@ export default function AudienceScreen() {
             },
           ]}
         >
-          {noteSent ? (
-            <View style={styles.noteSentRow}>
-              <Feather name="check" size={13} color="#3d8a6e" />
-              <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>
-                Note sent to presenter
-              </Text>
-            </View>
-          ) : noteOpen ? (
-            <>
-              <TextInput
-                style={[styles.noteInput, { color: textPrimary }]}
-                placeholder="Write a note to the presenter…"
-                placeholderTextColor={textSecondary}
-                value={noteText}
-                onChangeText={setNoteText}
-                multiline
-                maxLength={280}
-                autoFocus
-              />
-              <View style={styles.noteActions}>
-                <Pressable onPress={toggleNote} style={styles.noteCancelBtn}>
-                  <Text style={[styles.noteCancelText, { color: textSecondary }]}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleSendNote}
-                  style={[
-                    styles.noteSendBtn,
-                    {
-                      backgroundColor: noteText.trim()
-                        ? accent
-                        : isDark ? "#3a3530" : "#e8e3db",
-                    },
-                  ]}
-                >
-                  <Text
+          {noteOpen ? (
+            briefSent ? (
+              <View style={styles.noteSentRow}>
+                <Feather name="check" size={13} color="#3d8a6e" />
+                <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>
+                  Note sent — write another or wait
+                </Text>
+              </View>
+            ) : (
+              <>
+                <TextInput
+                  style={[styles.noteInput, { color: textPrimary }]}
+                  placeholder="Write a note to the presenter…"
+                  placeholderTextColor={textSecondary}
+                  value={noteText}
+                  onChangeText={setNoteText}
+                  multiline
+                  maxLength={280}
+                  autoFocus
+                />
+                <View style={styles.noteActions}>
+                  <Pressable onPress={toggleNote} style={styles.noteCancelBtn}>
+                    <Text style={[styles.noteCancelText, { color: textSecondary }]}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleSendNote}
                     style={[
-                      styles.noteSendText,
-                      { color: noteText.trim() ? "#fefcf8" : textSecondary },
+                      styles.noteSendBtn,
+                      {
+                        backgroundColor: noteText.trim()
+                          ? accent
+                          : isDark ? "#3a3530" : "#e8e3db",
+                      },
                     ]}
                   >
-                    Send
-                  </Text>
-                </Pressable>
-              </View>
-            </>
+                    <Text
+                      style={[
+                        styles.noteSendText,
+                        { color: noteText.trim() ? "#fefcf8" : textSecondary },
+                      ]}
+                    >
+                      Send
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )
+          ) : noteCooldown ? (
+            <View style={styles.noteClosedRow}>
+              <Feather name="clock" size={13} color={textSecondary} />
+              <Text style={[styles.noteClosedText, { color: textSecondary }]}>
+                Please wait a moment…
+              </Text>
+            </View>
           ) : (
             <Pressable style={styles.noteClosedRow} onPress={toggleNote}>
               <Feather name="message-square" size={13} color={textSecondary} />
@@ -299,14 +349,15 @@ export default function AudienceScreen() {
             ))}
           </View>
         )}
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { flex: 1, paddingHorizontal: 24 },
+  container: { flexGrow: 1, paddingHorizontal: 24 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",

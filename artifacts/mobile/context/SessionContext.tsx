@@ -40,6 +40,7 @@ interface SessionActions {
   createSession: () => void;
   joinSession: (code: string) => void;
   voteNext: () => void;
+  unvoteNext: () => void;
   advanceSlide: () => void;
   resetVotes: () => void;
   leaveSession: () => void;
@@ -68,6 +69,7 @@ const SessionContext = createContext<SessionState & SessionActions>({
   createSession: () => {},
   joinSession: () => {},
   voteNext: () => {},
+  unvoteNext: () => {},
   advanceSlide: () => {},
   resetVotes: () => {},
   leaveSession: () => {},
@@ -243,6 +245,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     send({ type: "vote_next" });
   }, [send]);
 
+  const unvoteNext = useCallback(() => {
+    send({ type: "unvote_next" });
+  }, [send]);
+
   const advanceSlide = useCallback(() => {
     send({ type: "advance_slide" });
   }, [send]);
@@ -277,6 +283,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         createSession,
         joinSession,
         voteNext,
+        unvoteNext,
         advanceSlide,
         resetVotes,
         leaveSession,

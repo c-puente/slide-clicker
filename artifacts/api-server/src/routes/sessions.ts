@@ -17,6 +17,7 @@ interface Session {
   clients: Map<string, Client>;
   slideNumber: number;
   voteCount: number;
+  voterIds: Set<string>;
 }
 
 const sessions = new Map<string, Session>();
@@ -96,6 +97,7 @@ export function attachWebSocketServer(server: import("http").Server) {
           clients: new Map(),
           slideNumber: 1,
           voteCount: 0,
+          voterIds: new Set(),
         };
         const client: Client = { ws, name, role: "presenter", sessionCode: code };
         session.clients.set(clientId, client);
@@ -150,7 +152,10 @@ export function attachWebSocketServer(server: import("http").Server) {
         const session = sessions.get(sessionCode);
         if (!session) return;
 
-        session.voteCount += 1;
+        if (session.voterIds.has(clientId)) return;
+        session.voterIds.add(clientId);
+        session.voteCount = session.voterIds.size;
+
         const totalAudience = Array.from(session.clients.values()).filter(
           (c) => c.role === "audience",
         ).length;
@@ -162,6 +167,26 @@ export function attachWebSocketServer(server: import("http").Server) {
         });
 
         logger.info({ sessionCode, voteCount: session.voteCount }, "Vote cast");
+      } else if (type === "unvote_next") {
+        if (!sessionCode || !clientId) return;
+        const session = sessions.get(sessionCode);
+        if (!session) return;
+
+        if (!session.voterIds.has(clientId)) return;
+        session.voterIds.delete(clientId);
+        session.voteCount = session.voterIds.size;
+
+        const totalAudience = Array.from(session.clients.values()).filter(
+          (c) => c.role === "audience",
+        ).length;
+
+        broadcastAll(session, {
+          type: "vote_update",
+          voteCount: session.voteCount,
+          totalAudience,
+        });
+
+        logger.info({ sessionCode, voteCount: session.voteCount }, "Vote cancelled");
       } else if (type === "advance_slide") {
         if (!sessionCode || !clientId) return;
         const session = sessions.get(sessionCode);
@@ -169,6 +194,7 @@ export function attachWebSocketServer(server: import("http").Server) {
 
         session.slideNumber += 1;
         session.voteCount = 0;
+        session.voterIds.clear();
 
         const totalAudience = Array.from(session.clients.values()).filter(
           (c) => c.role === "audience",
@@ -191,6 +217,7 @@ export function attachWebSocketServer(server: import("http").Server) {
         if (!session) return;
 
         session.voteCount = 0;
+        session.voterIds.clear();
         const totalAudience = Array.from(session.clients.values()).filter(
           (c) => c.role === "audience",
         ).length;
