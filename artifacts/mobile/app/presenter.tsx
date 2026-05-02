@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
@@ -256,6 +257,25 @@ export default function PresenterScreen() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const handleShare = async () => {
+    if (!code) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const message = `Join my presentation — enter code ${code} in the Slide Clicker app.`;
+    try {
+      if (Platform.OS === "web") {
+        if (typeof navigator !== "undefined" && navigator.share) {
+          await navigator.share({ title: "Join my presentation", text: message });
+        } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+          await navigator.clipboard.writeText(code);
+        }
+      } else {
+        await Share.share({ message, title: "Join my presentation" });
+      }
+    } catch {
+      // user cancelled — no-op
+    }
+  };
+
   const flashAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
@@ -359,19 +379,30 @@ export default function PresenterScreen() {
             <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
           </Pressable>
 
-          {/* Code + lock indicator */}
+          {/* Code + share + lock indicator */}
           <View style={styles.codeArea}>
-            <View
-              style={[
+            <Pressable
+              onPress={handleShare}
+              style={({ pressed }) => [
                 styles.codePill,
-                { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" },
+                {
+                  backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)",
+                  opacity: pressed ? 0.7 : 1,
+                },
               ]}
             >
               <Text style={[styles.codeValue, { color: accent }]}>{code}</Text>
-            </View>
+            </Pressable>
             {roomLocked && (
               <Feather name="lock" size={11} color={accent} style={{ marginLeft: 6 }} />
             )}
+            <Pressable
+              onPress={handleShare}
+              hitSlop={10}
+              style={({ pressed }) => [styles.shareBtn, { opacity: pressed ? 0.5 : 1 }]}
+            >
+              <Feather name="share-2" size={14} color={textSecondary} />
+            </Pressable>
           </View>
 
           {/* Settings button */}
@@ -547,6 +578,11 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
+  },
+  shareBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    marginLeft: 4,
   },
   slideHero: { marginBottom: 24 },
   slideLabel: {
