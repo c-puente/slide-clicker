@@ -35,7 +35,7 @@ export default function HomeScreen() {
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: false }).start();
   }, []);
 
   useEffect(() => {
@@ -52,10 +52,10 @@ export default function HomeScreen() {
     if (error) {
       setIsLoading(false);
       Animated.sequence([
-        Animated.timing(shakeAnim, { toValue: 7, duration: 55, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: -7, duration: 55, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 5, duration: 55, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 7, duration: 55, useNativeDriver: false }),
+        Animated.timing(shakeAnim, { toValue: -7, duration: 55, useNativeDriver: false }),
+        Animated.timing(shakeAnim, { toValue: 5, duration: 55, useNativeDriver: false }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: false }),
       ]).start();
     }
   }, [error]);

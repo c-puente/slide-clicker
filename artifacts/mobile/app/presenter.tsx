@@ -31,8 +31,8 @@ function NoteToast({
 
   useEffect(() => {
     Animated.parallel([
-      Animated.spring(slideAnim, { toValue: 0, tension: 260, friction: 24, useNativeDriver: true }),
-      Animated.timing(opacityAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 260, friction: 24, useNativeDriver: false }),
+      Animated.timing(opacityAnim, { toValue: 1, duration: 180, useNativeDriver: false }),
     ]).start();
     const timer = setTimeout(() => dismiss(), 8000);
     return () => clearTimeout(timer);
@@ -40,8 +40,8 @@ function NoteToast({
 
   const dismiss = () => {
     Animated.parallel([
-      Animated.timing(slideAnim, { toValue: -80, duration: 220, useNativeDriver: true }),
-      Animated.timing(opacityAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: -80, duration: 220, useNativeDriver: false }),
+      Animated.timing(opacityAnim, { toValue: 0, duration: 180, useNativeDriver: false }),
     ]).start(() => onDismiss());
   };
 
@@ -98,7 +98,7 @@ export default function PresenterScreen() {
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: false }).start();
   }, []);
 
   useEffect(() => {
@@ -122,8 +122,8 @@ export default function PresenterScreen() {
     if (ratio >= 0.5 && totalAudience > 0) {
       const pulse = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.03, duration: 900, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.03, duration: 900, useNativeDriver: false }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: false }),
         ]),
       );
       pulse.start();
