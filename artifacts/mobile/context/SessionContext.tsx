@@ -10,7 +10,8 @@ import React, {
 
 export type Role = "presenter" | "audience";
 
-interface PresenceMember {
+export interface PresenceMember {
+  id: string;
   name: string;
   role: Role;
 }
@@ -33,6 +34,8 @@ interface SessionState {
   error: string | null;
   triggerFlash: boolean;
   notes: Note[];
+  roomLocked: boolean;
+  notesDisabled: boolean;
 }
 
 interface SessionActions {
@@ -47,6 +50,9 @@ interface SessionActions {
   clearError: () => void;
   sendNote: (text: string) => void;
   dismissNote: (id: string) => void;
+  setRoomLocked: (locked: boolean) => void;
+  setNotesDisabled: (disabled: boolean) => void;
+  removeMember: (memberId: string) => void;
 }
 
 const defaultState: SessionState = {
@@ -61,6 +67,8 @@ const defaultState: SessionState = {
   error: null,
   triggerFlash: false,
   notes: [],
+  roomLocked: false,
+  notesDisabled: false,
 };
 
 const SessionContext = createContext<SessionState & SessionActions>({
@@ -76,6 +84,9 @@ const SessionContext = createContext<SessionState & SessionActions>({
   clearError: () => {},
   sendNote: () => {},
   dismissNote: () => {},
+  setRoomLocked: () => {},
+  setNotesDisabled: () => {},
+  removeMember: () => {},
 });
 
 export function useSession() {
@@ -88,7 +99,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<SessionState>(defaultState);
   const wsRef = useRef<WebSocket | null>(null);
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRoleRef = useRef<Role | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem("slideclicker_name").then((stored) => {
@@ -136,6 +146,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             presence: (msg["presence"] as PresenceMember[]) ?? [],
             voteCount: 0,
             totalAudience: 0,
+            roomLocked: (msg["roomLocked"] as boolean) ?? false,
+            notesDisabled: (msg["notesDisabled"] as boolean) ?? false,
           }));
         } else if (type === "session_joined") {
           setState((s) => ({
@@ -145,21 +157,20 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             slideNumber: (msg["slideNumber"] as number) ?? 1,
             presence: (msg["presence"] as PresenceMember[]) ?? [],
             voteCount: 0,
+            roomLocked: (msg["roomLocked"] as boolean) ?? false,
+            notesDisabled: (msg["notesDisabled"] as boolean) ?? false,
           }));
         } else if (type === "presence_update") {
           setState((s) => {
             const presence = (msg["presence"] as PresenceMember[]) ?? [];
-            const totalAudience = presence.filter(
-              (p) => p.role === "audience",
-            ).length;
+            const totalAudience = presence.filter((p) => p.role === "audience").length;
             return { ...s, presence, totalAudience };
           });
         } else if (type === "vote_update") {
           setState((s) => {
             const voteCount = (msg["voteCount"] as number) ?? 0;
             const totalAudience = (msg["totalAudience"] as number) ?? s.totalAudience;
-            const shouldFlash =
-              s.role === "presenter" && voteCount > s.voteCount;
+            const shouldFlash = s.role === "presenter" && voteCount > s.voteCount;
 
             if (shouldFlash) {
               if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
@@ -195,6 +206,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
               },
             ],
           }));
+        } else if (type === "room_settings") {
+          setState((s) => ({
+            ...s,
+            roomLocked: (msg["roomLocked"] as boolean) ?? s.roomLocked,
+            notesDisabled: (msg["notesDisabled"] as boolean) ?? s.notesDisabled,
+          }));
+        } else if (type === "removed_from_session") {
+          wsRef.current?.close();
+          wsRef.current = null;
+          setState((s) => ({ ...defaultState, name: s.name }));
         } else if (type === "error") {
           setState((s) => ({
             ...s,
@@ -226,36 +247,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const createSession = useCallback(() => {
     const name = state.name || "Presenter";
-    connect(() => {
-      send({ type: "create_session", name });
-    });
+    connect(() => send({ type: "create_session", name }));
   }, [state.name, connect, send]);
 
   const joinSession = useCallback(
     (code: string) => {
       const name = state.name || "Audience";
-      connect(() => {
-        send({ type: "join_session", code, name });
-      });
+      connect(() => send({ type: "join_session", code, name }));
     },
     [state.name, connect, send],
   );
 
-  const voteNext = useCallback(() => {
-    send({ type: "vote_next" });
-  }, [send]);
-
-  const unvoteNext = useCallback(() => {
-    send({ type: "unvote_next" });
-  }, [send]);
-
-  const advanceSlide = useCallback(() => {
-    send({ type: "advance_slide" });
-  }, [send]);
-
-  const resetVotes = useCallback(() => {
-    send({ type: "reset_votes" });
-  }, [send]);
+  const voteNext = useCallback(() => send({ type: "vote_next" }), [send]);
+  const unvoteNext = useCallback(() => send({ type: "unvote_next" }), [send]);
+  const advanceSlide = useCallback(() => send({ type: "advance_slide" }), [send]);
+  const resetVotes = useCallback(() => send({ type: "reset_votes" }), [send]);
 
   const leaveSession = useCallback(() => {
     wsRef.current?.close();
@@ -275,6 +281,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, notes: s.notes.filter((n) => n.id !== id) }));
   }, []);
 
+  const setRoomLocked = useCallback((locked: boolean) => {
+    send({ type: "set_room_locked", locked });
+  }, [send]);
+
+  const setNotesDisabled = useCallback((disabled: boolean) => {
+    send({ type: "set_notes_disabled", disabled });
+  }, [send]);
+
+  const removeMember = useCallback((memberId: string) => {
+    send({ type: "remove_member", memberId });
+  }, [send]);
+
   return (
     <SessionContext.Provider
       value={{
@@ -290,6 +308,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         clearError,
         sendNote,
         dismissNote,
+        setRoomLocked,
+        setNotesDisabled,
+        removeMember,
       }}
     >
       {children}

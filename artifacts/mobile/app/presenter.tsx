@@ -1,13 +1,15 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
   useColorScheme,
@@ -15,8 +17,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSession } from "@/context/SessionContext";
-import type { Note } from "@/context/SessionContext";
+import type { Note, PresenceMember } from "@/context/SessionContext";
 
+// ── Note toast ───────────────────────────────────────────────────────────────
 function NoteToast({
   note,
   onDismiss,
@@ -73,6 +76,159 @@ function NoteToast({
   );
 }
 
+// ── Settings sheet ────────────────────────────────────────────────────────────
+interface SettingsSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  isDark: boolean;
+  roomLocked: boolean;
+  notesDisabled: boolean;
+  audienceMembers: PresenceMember[];
+  onSetRoomLocked: (locked: boolean) => void;
+  onSetNotesDisabled: (disabled: boolean) => void;
+  onRemoveMember: (memberId: string) => void;
+}
+
+function SettingsSheet({
+  visible,
+  onClose,
+  isDark,
+  roomLocked,
+  notesDisabled,
+  audienceMembers,
+  onSetRoomLocked,
+  onSetNotesDisabled,
+  onRemoveMember,
+}: SettingsSheetProps) {
+  const insets = useSafeAreaInsets();
+
+  const surface = isDark ? "#1c1914" : "#fefcf8";
+  const textPrimary = isDark ? "#ede9e1" : "#1a1612";
+  const textSecondary = isDark ? "#6e6258" : "#7a7268";
+  const accent = "#c96a2f";
+  const divider = isDark ? "rgba(237,233,225,0.08)" : "rgba(26,22,18,0.08)";
+  const subtleBg = isDark ? "rgba(237,233,225,0.05)" : "rgba(26,22,18,0.04)";
+  const switchTrackOff = isDark ? "#3a3530" : "#dcd7cf";
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={sheet.root}>
+        <Pressable style={sheet.backdrop} onPress={onClose} />
+
+        <View
+          style={[
+            sheet.panel,
+            { backgroundColor: surface, paddingBottom: insets.bottom + 24 },
+          ]}
+        >
+          <View style={[sheet.handle, { backgroundColor: isDark ? "rgba(237,233,225,0.18)" : "rgba(26,22,18,0.13)" }]} />
+
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+            {/* ── Controls ── */}
+            <Text style={[sheet.sectionLabel, { color: textSecondary }]}>
+              Session Controls
+            </Text>
+
+            {/* Lock Room */}
+            <View style={[sheet.row, { borderTopColor: divider }]}>
+              <View style={[sheet.rowIcon, { backgroundColor: roomLocked ? "rgba(201,106,47,0.13)" : subtleBg }]}>
+                <Feather
+                  name={roomLocked ? "lock" : "unlock"}
+                  size={15}
+                  color={roomLocked ? accent : textSecondary}
+                />
+              </View>
+              <View style={sheet.rowText}>
+                <Text style={[sheet.rowTitle, { color: textPrimary }]}>Lock Room</Text>
+                <Text style={[sheet.rowSub, { color: textSecondary }]}>
+                  {roomLocked ? "New members cannot join" : "Open to new members"}
+                </Text>
+              </View>
+              <Switch
+                value={roomLocked}
+                onValueChange={(v) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onSetRoomLocked(v);
+                }}
+                trackColor={{ false: switchTrackOff, true: accent }}
+                thumbColor="#fefcf8"
+                ios_backgroundColor={switchTrackOff}
+              />
+            </View>
+
+            {/* Notes */}
+            <View style={[sheet.row, { borderTopColor: divider }]}>
+              <View style={[sheet.rowIcon, { backgroundColor: notesDisabled ? "rgba(201,106,47,0.13)" : subtleBg }]}>
+                <Feather
+                  name="message-square"
+                  size={15}
+                  color={notesDisabled ? accent : textSecondary}
+                />
+              </View>
+              <View style={sheet.rowText}>
+                <Text style={[sheet.rowTitle, { color: textPrimary }]}>Notes</Text>
+                <Text style={[sheet.rowSub, { color: textSecondary }]}>
+                  {notesDisabled ? "Audience cannot send notes" : "Audience can send notes"}
+                </Text>
+              </View>
+              <Switch
+                value={!notesDisabled}
+                onValueChange={(v) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onSetNotesDisabled(!v);
+                }}
+                trackColor={{ false: switchTrackOff, true: accent }}
+                thumbColor="#fefcf8"
+                ios_backgroundColor={switchTrackOff}
+              />
+            </View>
+
+            {/* ── Audience ── */}
+            <Text style={[sheet.sectionLabel, { color: textSecondary, marginTop: 24 }]}>
+              {audienceMembers.length > 0
+                ? `Audience · ${audienceMembers.length}`
+                : "Audience"}
+            </Text>
+
+            {audienceMembers.length === 0 ? (
+              <Text style={[sheet.emptyText, { color: textSecondary }]}>
+                No one has joined yet
+              </Text>
+            ) : (
+              audienceMembers.map((m) => (
+                <View key={m.id} style={[sheet.memberRow, { borderTopColor: divider }]}>
+                  <View style={[sheet.memberDot, { backgroundColor: "#3d8a6e" }]} />
+                  <Text style={[sheet.memberName, { color: textPrimary }]}>{m.name}</Text>
+                  <Pressable
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      onRemoveMember(m.id);
+                    }}
+                    style={({ pressed }) => [
+                      sheet.removeBtn,
+                      { backgroundColor: pressed ? (isDark ? "rgba(237,233,225,0.08)" : "rgba(26,22,18,0.06)") : "transparent" },
+                    ]}
+                    hitSlop={8}
+                  >
+                    <Feather name="user-minus" size={14} color={textSecondary} />
+                  </Pressable>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Presenter screen ──────────────────────────────────────────────────────────
 export default function PresenterScreen() {
   const {
     code,
@@ -86,12 +242,19 @@ export default function PresenterScreen() {
     leaveSession,
     notes,
     dismissNote,
+    roomLocked,
+    notesDisabled,
+    setRoomLocked,
+    setNotesDisabled,
+    removeMember,
   } = useSession();
 
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const flashAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -187,6 +350,7 @@ export default function PresenterScreen() {
           },
         ]}
       >
+        {/* ── Top bar ── */}
         <View style={styles.topBar}>
           <Pressable
             onPress={() => { leaveSession(); router.replace("/"); }}
@@ -195,28 +359,43 @@ export default function PresenterScreen() {
             <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
           </Pressable>
 
-          <View
-            style={[
-              styles.codePill,
-              { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" },
+          {/* Code + lock indicator */}
+          <View style={styles.codeArea}>
+            <View
+              style={[
+                styles.codePill,
+                { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" },
+              ]}
+            >
+              <Text style={[styles.codeValue, { color: accent }]}>{code}</Text>
+            </View>
+            {roomLocked && (
+              <Feather name="lock" size={11} color={accent} style={{ marginLeft: 6 }} />
+            )}
+          </View>
+
+          {/* Settings button */}
+          <Pressable
+            onPress={() => setSettingsOpen(true)}
+            style={({ pressed }) => [
+              styles.settingsBtn,
+              {
+                backgroundColor: isDark ? "rgba(237,233,225,0.07)" : "rgba(26,22,18,0.05)",
+                opacity: pressed ? 0.6 : 1,
+              },
             ]}
           >
-            <Text style={[styles.codeValue, { color: accent }]}>{code}</Text>
-          </View>
-
-          <View style={styles.audienceCount}>
-            <Feather name="users" size={13} color={textSecondary} />
-            <Text style={[styles.audienceCountText, { color: textSecondary }]}>
-              {audienceMembers.length}
-            </Text>
-          </View>
+            <Feather name="settings" size={16} color={textSecondary} />
+          </Pressable>
         </View>
 
+        {/* ── Slide number ── */}
         <View style={styles.slideHero}>
           <Text style={[styles.slideLabel, { color: textSecondary }]}>slide</Text>
           <Text style={[styles.slideNumber, { color: textPrimary }]}>{slideNumber}</Text>
         </View>
 
+        {/* ── Status card ── */}
         <Animated.View
           style={[
             styles.statusCard,
@@ -275,6 +454,7 @@ export default function PresenterScreen() {
           </View>
         )}
 
+        {/* ── Action row ── */}
         <View style={styles.actionRow}>
           {hasVotes && (
             <Pressable
@@ -286,9 +466,7 @@ export default function PresenterScreen() {
                 styles.resetBtn,
                 {
                   borderColor: divider,
-                  backgroundColor: isDark
-                    ? "rgba(237,233,225,0.04)"
-                    : "rgba(26,22,18,0.04)",
+                  backgroundColor: isDark ? "rgba(237,233,225,0.04)" : "rgba(26,22,18,0.04)",
                   opacity: pressed ? 0.6 : 1,
                 },
               ]}
@@ -316,11 +494,12 @@ export default function PresenterScreen() {
           </Pressable>
         </View>
 
+        {/* ── Audience chips ── */}
         {audienceMembers.length > 0 && (
           <View style={[styles.memberRow, { borderTopColor: divider }]}>
-            {audienceMembers.map((m, i) => (
+            {audienceMembers.map((m) => (
               <View
-                key={i}
+                key={m.id}
                 style={[styles.memberChip, { backgroundColor: isDark ? "#2a2520" : "#eee9e1" }]}
               >
                 <View style={[styles.memberDot, { backgroundColor: "#3d8a6e" }]} />
@@ -330,10 +509,24 @@ export default function PresenterScreen() {
           </View>
         )}
       </View>
+
+      {/* ── Settings sheet ── */}
+      <SettingsSheet
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        isDark={isDark}
+        roomLocked={roomLocked}
+        notesDisabled={notesDisabled}
+        audienceMembers={audienceMembers}
+        onSetRoomLocked={setRoomLocked}
+        onSetNotesDisabled={setNotesDisabled}
+        onRemoveMember={removeMember}
+      />
     </Animated.View>
   );
 }
 
+// ── Main screen styles ────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, paddingHorizontal: 24 },
@@ -345,20 +538,16 @@ const styles = StyleSheet.create({
   },
   leaveBtn: { paddingVertical: 6, paddingRight: 8 },
   leaveBtnText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
+  codeArea: { flexDirection: "row", alignItems: "center" },
   codePill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-  codeValue: {
-    fontSize: 16,
-    fontFamily: "PlusJakartaSans_800ExtraBold",
-    letterSpacing: 5,
-  },
-  audienceCount: {
-    flexDirection: "row",
+  codeValue: { fontSize: 16, fontFamily: "PlusJakartaSans_800ExtraBold", letterSpacing: 5 },
+  settingsBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
     alignItems: "center",
-    gap: 5,
-    minWidth: 36,
-    justifyContent: "flex-end",
+    justifyContent: "center",
   },
-  audienceCountText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular" },
   slideHero: { marginBottom: 24 },
   slideLabel: {
     fontSize: 11,
@@ -373,12 +562,7 @@ const styles = StyleSheet.create({
     lineHeight: 80,
     letterSpacing: -2.5,
   },
-  statusCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-  },
+  statusCard: { borderRadius: 12, borderWidth: 1, padding: 16, marginBottom: 12 },
   statusCardInner: { flexDirection: "row", alignItems: "center", gap: 12 },
   statusDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   statusTextBlock: { flex: 1 },
@@ -388,69 +572,81 @@ const styles = StyleSheet.create({
   progressFill: { height: "100%", borderRadius: 2 },
   actionRow: { flexDirection: "row", gap: 10, marginBottom: 22 },
   resetBtn: {
-    height: 50,
-    width: 50,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
+    height: 50, width: 50, borderRadius: 10,
+    alignItems: "center", justifyContent: "center", borderWidth: 1,
   },
   nextBtn: {
-    height: 50,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    paddingHorizontal: 22,
+    height: 50, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+    flexDirection: "row", paddingHorizontal: 22,
   },
   nextBtnText: {
-    color: "#fefcf8",
-    fontSize: 15,
-    fontFamily: "PlusJakartaSans_600SemiBold",
-    letterSpacing: 0.1,
+    color: "#fefcf8", fontSize: 15,
+    fontFamily: "PlusJakartaSans_600SemiBold", letterSpacing: 0.1,
   },
   memberRow: {
-    borderTopWidth: 1,
-    paddingTop: 14,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+    borderTopWidth: 1, paddingTop: 14,
+    flexDirection: "row", flexWrap: "wrap", gap: 8,
   },
   memberChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 6,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 6, gap: 6,
   },
   memberDot: { width: 6, height: 6, borderRadius: 3 },
   memberName: { fontSize: 12, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
-  notesOverlay: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    zIndex: 99,
-    maxHeight: 260,
-  },
+  notesOverlay: { position: "absolute", left: 16, right: 16, zIndex: 99, maxHeight: 260 },
   notesScroll: { flex: 1 },
   noteToast: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
+    flexDirection: "row", alignItems: "flex-start",
+    borderRadius: 10, borderLeftWidth: 3,
+    paddingHorizontal: 14, paddingVertical: 10, gap: 10,
   },
   noteToastInner: { flex: 1 },
   noteFrom: {
-    fontSize: 10,
-    fontFamily: "PlusJakartaSans_700Bold",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    marginBottom: 3,
+    fontSize: 10, fontFamily: "PlusJakartaSans_700Bold",
+    letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 3,
   },
   noteText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", lineHeight: 19, letterSpacing: 0.1 },
   noteDismiss: { paddingTop: 2 },
+});
+
+// ── Settings sheet styles ─────────────────────────────────────────────────────
+const sheet = StyleSheet.create({
+  root: { flex: 1, justifyContent: "flex-end" },
+  backdrop: { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.48)" },
+  panel: { borderTopLeftRadius: 22, borderTopRightRadius: 22, maxHeight: "88%" },
+  handle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 12, marginBottom: 20 },
+  sectionLabel: {
+    paddingHorizontal: 22,
+    fontSize: 11,
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 22, paddingVertical: 14,
+    borderTopWidth: 1,
+  },
+  rowIcon: {
+    width: 34, height: 34, borderRadius: 9,
+    alignItems: "center", justifyContent: "center", marginRight: 13,
+  },
+  rowText: { flex: 1 },
+  rowTitle: { fontSize: 14, fontFamily: "PlusJakartaSans_500Medium", letterSpacing: 0.1 },
+  rowSub: { fontSize: 12, fontFamily: "PlusJakartaSans_400Regular", marginTop: 2, letterSpacing: 0.1 },
+  emptyText: {
+    paddingHorizontal: 22, paddingTop: 8, paddingBottom: 4,
+    fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1,
+  },
+  memberRow: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 22, paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  memberDot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 11 },
+  memberName: { flex: 1, fontSize: 14, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
+  removeBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 7 },
 });

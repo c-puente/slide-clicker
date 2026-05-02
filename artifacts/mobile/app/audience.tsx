@@ -30,6 +30,7 @@ export default function AudienceScreen() {
     unvoteNext,
     leaveSession,
     sendNote,
+    notesDisabled,
   } = useSession();
 
   const router = useRouter();
@@ -62,6 +63,13 @@ export default function AudienceScreen() {
     Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
   }, [slideNumber]);
 
+  // Close note bar if presenter disables notes while it's open
+  useEffect(() => {
+    if (notesDisabled && noteOpen) {
+      closeNoteBar();
+    }
+  }, [notesDisabled]);
+
   const closeNoteBar = () => {
     setNoteOpen(false);
     Keyboard.dismiss();
@@ -74,7 +82,7 @@ export default function AudienceScreen() {
   };
 
   const toggleNote = () => {
-    if (noteCooldown) return;
+    if (noteCooldown || notesDisabled) return;
     const opening = !noteOpen;
     setNoteOpen(opening);
     if (!opening) Keyboard.dismiss();
@@ -87,7 +95,7 @@ export default function AudienceScreen() {
   };
 
   const handleSendNote = () => {
-    if (!noteText.trim() || noteCooldown) return;
+    if (!noteText.trim() || noteCooldown || notesDisabled) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     sendNote(noteText.trim());
     setNoteText("");
@@ -156,199 +164,225 @@ export default function AudienceScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={() => { leaveSession(); router.replace("/"); }}
-            style={({ pressed }) => [styles.leaveBtn, { opacity: pressed ? 0.6 : 1 }]}
-          >
-            <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
-          </Pressable>
-
-          <View
-            style={[
-              styles.codePill,
-              { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" },
-            ]}
-          >
-            <Text style={[styles.codeValue, { color: accent }]}>{code}</Text>
-          </View>
-
-          <View style={styles.countSlot}>
-            <Feather name="users" size={13} color={textSecondary} />
-            <Text style={[styles.countText, { color: textSecondary }]}>
-              {audienceMembers.length}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.slideHero}>
-          <Text style={[styles.slideLabel, { color: textSecondary }]}>slide</Text>
-          <Text style={[styles.slideNumber, { color: textPrimary }]}>{slideNumber}</Text>
-        </View>
-
-        <Animated.View style={{ transform: [{ scale: pressAnim }] }}>
-          <Pressable
-            onPress={handleVote}
-            style={[
-              styles.voteButton,
-              {
-                backgroundColor: hasVoted
-                  ? isDark ? "#251f18" : "#f0ece4"
-                  : accent,
-                borderColor: hasVoted ? accent : "transparent",
-                borderWidth: hasVoted ? 1.5 : 0,
-              },
-            ]}
-          >
-            <View style={styles.voteIconContainer}>
-              <Animated.View
-                style={[
-                  styles.voteIconLayer,
-                  {
-                    opacity: checkAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 0],
-                    }),
-                  },
-                ]}
-              >
-                <Feather name="arrow-right" size={20} color="#fefcf8" />
-              </Animated.View>
-              <Animated.View style={[styles.voteIconLayer, { opacity: checkAnim }]}>
-                <Feather name="check" size={20} color={accent} />
-              </Animated.View>
-            </View>
-            <Text style={[styles.voteButtonText, { color: hasVoted ? accent : "#fefcf8" }]}>
-              {hasVoted ? "Requested" : "Next Slide, Please"}
-            </Text>
-            <Text
-              style={[
-                styles.voteButtonSub,
-                { color: hasVoted ? `${accent}99` : "rgba(254,252,248,0.65)" },
-              ]}
+          {/* ── Top bar ── */}
+          <View style={styles.topBar}>
+            <Pressable
+              onPress={() => { leaveSession(); router.replace("/"); }}
+              style={({ pressed }) => [styles.leaveBtn, { opacity: pressed ? 0.6 : 1 }]}
             >
-              {hasVoted ? "Tap again to cancel" : "Tap to signal the presenter"}
-            </Text>
-          </Pressable>
-        </Animated.View>
+              <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
+            </Pressable>
 
-        {totalAudience > 0 && (
-          <View style={styles.voteStatus}>
             <View
               style={[
-                styles.progressTrack,
-                { backgroundColor: isDark ? "#3a3530" : "#e8e3db" },
+                styles.codePill,
+                { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" },
               ]}
             >
+              <Text style={[styles.codeValue, { color: accent }]}>{code}</Text>
+            </View>
+
+            <View style={styles.countSlot}>
+              <Feather name="users" size={13} color={textSecondary} />
+              <Text style={[styles.countText, { color: textSecondary }]}>
+                {audienceMembers.length}
+              </Text>
+            </View>
+          </View>
+
+          {/* ── Slide number ── */}
+          <View style={styles.slideHero}>
+            <Text style={[styles.slideLabel, { color: textSecondary }]}>slide</Text>
+            <Text style={[styles.slideNumber, { color: textPrimary }]}>{slideNumber}</Text>
+          </View>
+
+          {/* ── Vote button ── */}
+          <Animated.View style={{ transform: [{ scale: pressAnim }] }}>
+            <Pressable
+              onPress={handleVote}
+              style={[
+                styles.voteButton,
+                {
+                  backgroundColor: hasVoted
+                    ? isDark ? "#251f18" : "#f0ece4"
+                    : accent,
+                  borderColor: hasVoted ? accent : "transparent",
+                  borderWidth: hasVoted ? 1.5 : 0,
+                },
+              ]}
+            >
+              <View style={styles.voteIconContainer}>
+                <Animated.View
+                  style={[
+                    styles.voteIconLayer,
+                    {
+                      opacity: checkAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 0],
+                      }),
+                    },
+                  ]}
+                >
+                  <Feather name="arrow-right" size={20} color="#fefcf8" />
+                </Animated.View>
+                <Animated.View style={[styles.voteIconLayer, { opacity: checkAnim }]}>
+                  <Feather name="check" size={20} color={accent} />
+                </Animated.View>
+              </View>
+              <Text style={[styles.voteButtonText, { color: hasVoted ? accent : "#fefcf8" }]}>
+                {hasVoted ? "Requested" : "Next Slide, Please"}
+              </Text>
+              <Text
+                style={[
+                  styles.voteButtonSub,
+                  { color: hasVoted ? `${accent}99` : "rgba(254,252,248,0.65)" },
+                ]}
+              >
+                {hasVoted ? "Tap again to cancel" : "Tap to signal the presenter"}
+              </Text>
+            </Pressable>
+          </Animated.View>
+
+          {/* ── Vote progress ── */}
+          {totalAudience > 0 && (
+            <View style={styles.voteStatus}>
               <View
                 style={[
-                  styles.progressFill,
-                  {
-                    backgroundColor: ratio >= 0.5 ? accent : isDark ? "#5a4a3a" : "#c4a882",
-                    width: `${Math.min(ratio * 100, 100)}%`,
-                  },
+                  styles.progressTrack,
+                  { backgroundColor: isDark ? "#3a3530" : "#e8e3db" },
                 ]}
-              />
+              >
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      backgroundColor: ratio >= 0.5 ? accent : isDark ? "#5a4a3a" : "#c4a882",
+                      width: `${Math.min(ratio * 100, 100)}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.voteText, { color: textSecondary }]}>
+                {voteCount} of {totalAudience} want to advance
+              </Text>
             </View>
-            <Text style={[styles.voteText, { color: textSecondary }]}>
-              {voteCount} of {totalAudience} want to advance
-            </Text>
-          </View>
-        )}
+          )}
 
-        <Animated.View
-          style={[
-            styles.noteBar,
-            {
-              backgroundColor: surface,
-              borderColor: noteCooldown
-                ? isDark ? "rgba(237,233,225,0.06)" : "rgba(26,22,18,0.06)"
-                : noteOpen ? accent : inputBorder,
-              height: noteAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [44, 126],
-              }),
-            },
-          ]}
-        >
-          {noteOpen ? (
-            briefSent ? (
-              <View style={styles.noteSentRow}>
-                <Feather name="check" size={13} color="#3d8a6e" />
-                <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>
-                  Note sent — write another or wait
+          {/* ── Note bar ── */}
+          {notesDisabled ? (
+            <View
+              style={[
+                styles.noteBar,
+                {
+                  backgroundColor: surface,
+                  borderColor: divider,
+                  height: 44,
+                },
+              ]}
+            >
+              <View style={styles.noteClosedRow}>
+                <Feather name="slash" size={13} color={textSecondary} />
+                <Text style={[styles.noteClosedText, { color: textSecondary }]}>
+                  Notes are disabled
                 </Text>
               </View>
-            ) : (
-              <>
-                <TextInput
-                  style={[styles.noteInput, { color: textPrimary }]}
-                  placeholder="Write a note to the presenter…"
-                  placeholderTextColor={textSecondary}
-                  value={noteText}
-                  onChangeText={setNoteText}
-                  multiline
-                  maxLength={280}
-                  autoFocus
-                />
-                <View style={styles.noteActions}>
-                  <Pressable onPress={toggleNote} style={styles.noteCancelBtn}>
-                    <Text style={[styles.noteCancelText, { color: textSecondary }]}>Cancel</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={handleSendNote}
-                    style={[
-                      styles.noteSendBtn,
-                      {
-                        backgroundColor: noteText.trim()
-                          ? accent
-                          : isDark ? "#3a3530" : "#e8e3db",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.noteSendText,
-                        { color: noteText.trim() ? "#fefcf8" : textSecondary },
-                      ]}
-                    >
-                      Send
-                    </Text>
-                  </Pressable>
-                </View>
-              </>
-            )
-          ) : noteCooldown ? (
-            <View style={styles.noteClosedRow}>
-              <Feather name="clock" size={13} color={textSecondary} />
-              <Text style={[styles.noteClosedText, { color: textSecondary }]}>
-                Please wait a moment…
-              </Text>
             </View>
           ) : (
-            <Pressable style={styles.noteClosedRow} onPress={toggleNote}>
-              <Feather name="message-square" size={13} color={textSecondary} />
-              <Text style={[styles.noteClosedText, { color: textSecondary }]}>
-                Note to presenter
-              </Text>
-              <Feather name="chevron-up" size={13} color={textSecondary} />
-            </Pressable>
+            <Animated.View
+              style={[
+                styles.noteBar,
+                {
+                  backgroundColor: surface,
+                  borderColor: noteCooldown
+                    ? isDark ? "rgba(237,233,225,0.06)" : "rgba(26,22,18,0.06)"
+                    : noteOpen ? accent : inputBorder,
+                  height: noteAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [44, 126],
+                  }),
+                },
+              ]}
+            >
+              {noteOpen ? (
+                briefSent ? (
+                  <View style={styles.noteSentRow}>
+                    <Feather name="check" size={13} color="#3d8a6e" />
+                    <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>
+                      Note sent — write another or wait
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <TextInput
+                      style={[styles.noteInput, { color: textPrimary }]}
+                      placeholder="Write a note to the presenter…"
+                      placeholderTextColor={textSecondary}
+                      value={noteText}
+                      onChangeText={setNoteText}
+                      multiline
+                      maxLength={280}
+                      autoFocus
+                    />
+                    <View style={styles.noteActions}>
+                      <Pressable onPress={toggleNote} style={styles.noteCancelBtn}>
+                        <Text style={[styles.noteCancelText, { color: textSecondary }]}>Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={handleSendNote}
+                        style={[
+                          styles.noteSendBtn,
+                          {
+                            backgroundColor: noteText.trim()
+                              ? accent
+                              : isDark ? "#3a3530" : "#e8e3db",
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.noteSendText,
+                            { color: noteText.trim() ? "#fefcf8" : textSecondary },
+                          ]}
+                        >
+                          Send
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </>
+                )
+              ) : noteCooldown ? (
+                <View style={styles.noteClosedRow}>
+                  <Feather name="clock" size={13} color={textSecondary} />
+                  <Text style={[styles.noteClosedText, { color: textSecondary }]}>
+                    Please wait a moment…
+                  </Text>
+                </View>
+              ) : (
+                <Pressable style={styles.noteClosedRow} onPress={toggleNote}>
+                  <Feather name="message-square" size={13} color={textSecondary} />
+                  <Text style={[styles.noteClosedText, { color: textSecondary }]}>
+                    Note to presenter
+                  </Text>
+                  <Feather name="chevron-up" size={13} color={textSecondary} />
+                </Pressable>
+              )}
+            </Animated.View>
           )}
-        </Animated.View>
 
-        {audienceMembers.length > 0 && (
-          <View style={[styles.memberRow, { borderTopColor: divider }]}>
-            {audienceMembers.map((m, i) => (
-              <View
-                key={i}
-                style={[styles.memberChip, { backgroundColor: isDark ? "#2a2520" : "#eee9e1" }]}
-              >
-                <View style={[styles.memberDot, { backgroundColor: "#3d8a6e" }]} />
-                <Text style={[styles.memberName, { color: textPrimary }]}>{m.name}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+          {/* ── Audience chips ── */}
+          {audienceMembers.length > 0 && (
+            <View style={[styles.memberRow, { borderTopColor: divider }]}>
+              {audienceMembers.map((m) => (
+                <View
+                  key={m.id}
+                  style={[styles.memberChip, { backgroundColor: isDark ? "#2a2520" : "#eee9e1" }]}
+                >
+                  <View style={[styles.memberDot, { backgroundColor: "#3d8a6e" }]} />
+                  <Text style={[styles.memberName, { color: textPrimary }]}>{m.name}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </Animated.View>
@@ -369,78 +403,52 @@ const styles = StyleSheet.create({
   codePill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   codeValue: { fontSize: 16, fontFamily: "PlusJakartaSans_800ExtraBold", letterSpacing: 5 },
   countSlot: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    minWidth: 36,
-    justifyContent: "flex-end",
+    flexDirection: "row", alignItems: "center",
+    gap: 5, minWidth: 36, justifyContent: "flex-end",
   },
   countText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular" },
   slideHero: { marginBottom: 22 },
   slideLabel: {
-    fontSize: 11,
-    fontFamily: "PlusJakartaSans_500Medium",
-    letterSpacing: 1.8,
-    textTransform: "uppercase",
-    marginBottom: 4,
+    fontSize: 11, fontFamily: "PlusJakartaSans_500Medium",
+    letterSpacing: 1.8, textTransform: "uppercase", marginBottom: 4,
   },
   slideNumber: {
-    fontSize: 76,
-    fontFamily: "PlusJakartaSans_800ExtraBold",
-    lineHeight: 80,
-    letterSpacing: -2.5,
+    fontSize: 76, fontFamily: "PlusJakartaSans_800ExtraBold",
+    lineHeight: 80, letterSpacing: -2.5,
   },
   voteButton: {
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 34,
-    paddingHorizontal: 24,
-    marginBottom: 16,
+    borderRadius: 14, alignItems: "center", justifyContent: "center",
+    paddingVertical: 34, paddingHorizontal: 24, marginBottom: 16,
   },
   voteIconContainer: { width: 20, height: 20, marginBottom: 12 },
   voteIconLayer: { position: "absolute", top: 0, left: 0 },
   voteButtonText: {
-    fontSize: 20,
-    fontFamily: "PlusJakartaSans_700Bold",
-    marginBottom: 4,
-    letterSpacing: -0.3,
+    fontSize: 20, fontFamily: "PlusJakartaSans_700Bold",
+    marginBottom: 4, letterSpacing: -0.3,
   },
   voteButtonSub: {
-    fontSize: 12,
-    fontFamily: "PlusJakartaSans_400Regular",
-    textAlign: "center",
-    letterSpacing: 0.1,
+    fontSize: 12, fontFamily: "PlusJakartaSans_400Regular",
+    textAlign: "center", letterSpacing: 0.1,
   },
   voteStatus: { marginBottom: 16, gap: 7 },
   progressTrack: { height: 3, borderRadius: 2, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
   voteText: { fontSize: 11, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
   noteBar: {
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 14,
-    overflow: "hidden",
-    paddingHorizontal: 13,
-    paddingVertical: 7,
+    borderRadius: 10, borderWidth: 1, marginBottom: 14,
+    overflow: "hidden", paddingHorizontal: 13, paddingVertical: 7,
     justifyContent: "center",
   },
   noteClosedRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   noteClosedText: { flex: 1, fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
   noteInput: {
-    fontSize: 13,
-    fontFamily: "PlusJakartaSans_400Regular",
-    minHeight: 48,
-    textAlignVertical: "top",
-    marginBottom: 6,
-    paddingTop: 4,
-    letterSpacing: 0.1,
+    fontSize: 13, fontFamily: "PlusJakartaSans_400Regular",
+    minHeight: 48, textAlignVertical: "top",
+    marginBottom: 6, paddingTop: 4, letterSpacing: 0.1,
   },
   noteActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    gap: 8,
+    flexDirection: "row", justifyContent: "flex-end",
+    alignItems: "center", gap: 8,
   },
   noteCancelBtn: { paddingHorizontal: 10, paddingVertical: 5 },
   noteCancelText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular" },
@@ -449,19 +457,13 @@ const styles = StyleSheet.create({
   noteSentRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   noteSentText: { fontSize: 13, fontFamily: "PlusJakartaSans_500Medium" },
   memberRow: {
-    borderTopWidth: 1,
-    paddingTop: 14,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+    borderTopWidth: 1, paddingTop: 14,
+    flexDirection: "row", flexWrap: "wrap", gap: 8,
   },
   memberChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 6,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 6, gap: 6,
   },
   memberDot: { width: 6, height: 6, borderRadius: 3 },
   memberName: { fontSize: 12, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },

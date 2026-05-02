@@ -10,11 +10,11 @@ const MAX_SESSIONS             = 500;
 const MAX_AUDIENCE_PER_SESSION = 100;
 const MAX_NAME_LENGTH          = 50;
 const MAX_NOTE_LENGTH          = 280;
-const MSG_RATE_WINDOW_MS       = 2_000;  // rolling window
-const MSG_RATE_MAX             = 30;     // messages per window per connection
-const NOTE_RATE_WINDOW_MS      = 60_000; // 1-minute window
-const NOTE_RATE_MAX            = 10;     // max notes per minute per client
-const MAX_PAYLOAD_BYTES        = 8_192;  // 8 KB max WS frame
+const MSG_RATE_WINDOW_MS       = 2_000;
+const MSG_RATE_MAX             = 30;
+const NOTE_RATE_WINDOW_MS      = 60_000;
+const NOTE_RATE_MAX            = 10;
+const MAX_PAYLOAD_BYTES        = 8_192;
 
 // ── types ────────────────────────────────────────────────────────────────────
 interface Client {
@@ -22,6 +22,7 @@ interface Client {
   name: string;
   role: "presenter" | "audience";
   sessionCode: string;
+  memberId: string;
 }
 
 interface Session {
@@ -30,6 +31,8 @@ interface Session {
   slideNumber: number;
   voteCount: number;
   voterIds: Set<string>;
+  locked: boolean;
+  notesDisabled: boolean;
 }
 
 // ── state ────────────────────────────────────────────────────────────────────
@@ -43,6 +46,13 @@ function generateCode(): string {
     code += chars[Math.floor(Math.random() * chars.length)];
   }
   return sessions.has(code) ? generateCode() : code;
+}
+
+function generateMemberId(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let id = "";
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
 }
 
 function sanitizeName(raw: unknown): string {
@@ -72,6 +82,7 @@ function broadcastAll(session: Session, message: object) {
 
 function buildPresenceList(session: Session) {
   return Array.from(session.clients.values()).map((c) => ({
+    id: c.memberId,
     name: c.name,
     role: c.role,
   }));
@@ -104,11 +115,9 @@ export function attachWebSocketServer(server: import("http").Server) {
     let clientId: string | null = null;
     let sessionCode: string | null = null;
 
-    // Per-connection general rate limiting
     let msgCount = 0;
     let msgWindowStart = Date.now();
 
-    // Per-client note rate limiting
     let noteMsgCount = 0;
     let noteWindowStart = Date.now();
 
@@ -135,12 +144,9 @@ export function attachWebSocketServer(server: import("http").Server) {
 
       // ── create_session ─────────────────────────────────────────────────────
       if (type === "create_session") {
-        if (clientId) return; // already registered on this connection
-
+        if (clientId) return;
         if (sessions.size >= MAX_SESSIONS) {
-          ws.send(
-            JSON.stringify({ type: "error", message: "Server at capacity. Please try again later." }),
-          );
+          ws.send(JSON.stringify({ type: "error", message: "Server at capacity. Please try again later." }));
           return;
         }
 
@@ -155,24 +161,26 @@ export function attachWebSocketServer(server: import("http").Server) {
           slideNumber: 1,
           voteCount: 0,
           voterIds: new Set(),
+          locked: false,
+          notesDisabled: false,
         };
-        const client: Client = { ws, name, role: "presenter", sessionCode: code };
+        const client: Client = { ws, name, role: "presenter", sessionCode: code, memberId: generateMemberId() };
         session.clients.set(clientId, client);
         sessions.set(code, session);
 
-        ws.send(
-          JSON.stringify({
-            type: "session_created",
-            code,
-            slideNumber: session.slideNumber,
-            presence: buildPresenceList(session),
-          }),
-        );
+        ws.send(JSON.stringify({
+          type: "session_created",
+          code,
+          slideNumber: session.slideNumber,
+          presence: buildPresenceList(session),
+          roomLocked: false,
+          notesDisabled: false,
+        }));
         logger.info({ code, name }, "Session created");
 
       // ── join_session ───────────────────────────────────────────────────────
       } else if (type === "join_session") {
-        if (clientId) return; // already registered on this connection
+        if (clientId) return;
 
         const code = (msg["code"] as string)?.toUpperCase().trim();
         const name = sanitizeName(msg["name"]);
@@ -180,6 +188,11 @@ export function attachWebSocketServer(server: import("http").Server) {
         const session = sessions.get(code);
         if (!session) {
           ws.send(JSON.stringify({ type: "error", message: "Session not found" }));
+          return;
+        }
+
+        if (session.locked) {
+          ws.send(JSON.stringify({ type: "error", message: "This session is locked" }));
           return;
         }
 
@@ -191,24 +204,19 @@ export function attachWebSocketServer(server: import("http").Server) {
         clientId = `${code}-${Date.now()}-${Math.random()}`;
         sessionCode = code;
 
-        const client: Client = { ws, name, role: "audience", sessionCode: code };
+        const client: Client = { ws, name, role: "audience", sessionCode: code, memberId: generateMemberId() };
         session.clients.set(clientId, client);
 
-        ws.send(
-          JSON.stringify({
-            type: "session_joined",
-            code,
-            slideNumber: session.slideNumber,
-            presence: buildPresenceList(session),
-          }),
-        );
+        ws.send(JSON.stringify({
+          type: "session_joined",
+          code,
+          slideNumber: session.slideNumber,
+          presence: buildPresenceList(session),
+          roomLocked: session.locked,
+          notesDisabled: session.notesDisabled,
+        }));
 
-        broadcast(
-          session,
-          { type: "presence_update", presence: buildPresenceList(session) },
-          clientId,
-        );
-
+        broadcast(session, { type: "presence_update", presence: buildPresenceList(session) }, clientId);
         logger.info({ code, name }, "Audience joined");
 
       // ── vote_next ──────────────────────────────────────────────────────────
@@ -218,7 +226,7 @@ export function attachWebSocketServer(server: import("http").Server) {
         if (!session) return;
 
         const voter = session.clients.get(clientId);
-        if (!voter || voter.role !== "audience") return; // only audience may vote
+        if (!voter || voter.role !== "audience") return;
 
         if (session.voterIds.has(clientId)) return;
         session.voterIds.add(clientId);
@@ -229,7 +237,6 @@ export function attachWebSocketServer(server: import("http").Server) {
           voteCount: session.voteCount,
           totalAudience: audienceCount(session),
         });
-
         logger.info({ sessionCode, voteCount: session.voteCount }, "Vote cast");
 
       // ── unvote_next ────────────────────────────────────────────────────────
@@ -239,7 +246,7 @@ export function attachWebSocketServer(server: import("http").Server) {
         if (!session) return;
 
         const voter = session.clients.get(clientId);
-        if (!voter || voter.role !== "audience") return; // only audience may unvote
+        if (!voter || voter.role !== "audience") return;
 
         if (!session.voterIds.has(clientId)) return;
         session.voterIds.delete(clientId);
@@ -250,7 +257,6 @@ export function attachWebSocketServer(server: import("http").Server) {
           voteCount: session.voteCount,
           totalAudience: audienceCount(session),
         });
-
         logger.info({ sessionCode, voteCount: session.voteCount }, "Vote cancelled");
 
       // ── advance_slide ──────────────────────────────────────────────────────
@@ -260,7 +266,7 @@ export function attachWebSocketServer(server: import("http").Server) {
         if (!session) return;
 
         const sender = session.clients.get(clientId);
-        if (!sender || sender.role !== "presenter") return; // presenter only
+        if (!sender || sender.role !== "presenter") return;
 
         session.slideNumber += 1;
         session.voteCount = 0;
@@ -272,7 +278,6 @@ export function attachWebSocketServer(server: import("http").Server) {
           voteCount: 0,
           totalAudience: audienceCount(session),
         });
-
         logger.info({ sessionCode, slideNumber: session.slideNumber }, "Slide advanced");
 
       // ── reset_votes ────────────────────────────────────────────────────────
@@ -282,7 +287,7 @@ export function attachWebSocketServer(server: import("http").Server) {
         if (!session) return;
 
         const sender = session.clients.get(clientId);
-        if (!sender || sender.role !== "presenter") return; // presenter only
+        if (!sender || sender.role !== "presenter") return;
 
         session.voteCount = 0;
         session.voterIds.clear();
@@ -293,6 +298,87 @@ export function attachWebSocketServer(server: import("http").Server) {
           totalAudience: audienceCount(session),
         });
 
+      // ── set_room_locked ────────────────────────────────────────────────────
+      } else if (type === "set_room_locked") {
+        if (!sessionCode || !clientId) return;
+        const session = sessions.get(sessionCode);
+        if (!session) return;
+
+        const sender = session.clients.get(clientId);
+        if (!sender || sender.role !== "presenter") return;
+
+        session.locked = (msg["locked"] as boolean) === true;
+
+        broadcastAll(session, {
+          type: "room_settings",
+          roomLocked: session.locked,
+          notesDisabled: session.notesDisabled,
+        });
+        logger.info({ sessionCode, locked: session.locked }, "Room lock changed");
+
+      // ── set_notes_disabled ─────────────────────────────────────────────────
+      } else if (type === "set_notes_disabled") {
+        if (!sessionCode || !clientId) return;
+        const session = sessions.get(sessionCode);
+        if (!session) return;
+
+        const sender = session.clients.get(clientId);
+        if (!sender || sender.role !== "presenter") return;
+
+        session.notesDisabled = (msg["disabled"] as boolean) === true;
+
+        broadcastAll(session, {
+          type: "room_settings",
+          roomLocked: session.locked,
+          notesDisabled: session.notesDisabled,
+        });
+        logger.info({ sessionCode, notesDisabled: session.notesDisabled }, "Notes setting changed");
+
+      // ── remove_member ──────────────────────────────────────────────────────
+      } else if (type === "remove_member") {
+        if (!sessionCode || !clientId) return;
+        const session = sessions.get(sessionCode);
+        if (!session) return;
+
+        const sender = session.clients.get(clientId);
+        if (!sender || sender.role !== "presenter") return;
+
+        const targetMemberId = msg["memberId"] as string;
+        let targetClientId: string | null = null;
+        let targetClient: Client | null = null;
+
+        for (const [cid, c] of session.clients) {
+          if (c.memberId === targetMemberId && c.role === "audience") {
+            targetClientId = cid;
+            targetClient = c;
+            break;
+          }
+        }
+
+        if (!targetClientId || !targetClient) return;
+
+        // Notify the removed client before closing
+        if (targetClient.ws.readyState === WebSocket.OPEN) {
+          targetClient.ws.send(JSON.stringify({ type: "removed_from_session" }));
+        }
+
+        // Clean up
+        const hadVoted = session.voterIds.has(targetClientId);
+        session.clients.delete(targetClientId);
+        session.voterIds.delete(targetClientId);
+        session.voteCount = session.voterIds.size;
+
+        // Close their connection
+        try { targetClient.ws.close(1000, "Removed by presenter"); } catch {}
+
+        const total = audienceCount(session);
+        broadcast(session, { type: "presence_update", presence: buildPresenceList(session) });
+        if (hadVoted) {
+          broadcastAll(session, { type: "vote_update", voteCount: session.voteCount, totalAudience: total });
+        }
+
+        logger.info({ sessionCode, removed: targetClient.name }, "Member removed");
+
       // ── send_note ──────────────────────────────────────────────────────────
       } else if (type === "send_note") {
         if (!sessionCode || !clientId) return;
@@ -302,13 +388,14 @@ export function attachWebSocketServer(server: import("http").Server) {
         const sender = session.clients.get(clientId);
         if (!sender || sender.role !== "audience") return;
 
-        // Server-side note rate limiting (separate from general message rate)
+        if (session.notesDisabled) return;
+
         const noteNow = Date.now();
         if (noteNow - noteWindowStart > NOTE_RATE_WINDOW_MS) {
           noteMsgCount = 0;
           noteWindowStart = noteNow;
         }
-        if (++noteMsgCount > NOTE_RATE_MAX) return; // silently drop excess notes
+        if (++noteMsgCount > NOTE_RATE_MAX) return;
 
         const text = ((msg["text"] as string) ?? "")
           .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
@@ -318,14 +405,12 @@ export function attachWebSocketServer(server: import("http").Server) {
 
         for (const client of session.clients.values()) {
           if (client.role === "presenter" && client.ws.readyState === WebSocket.OPEN) {
-            client.ws.send(
-              JSON.stringify({
-                type: "note_received",
-                from: sender.name,
-                text,
-                id: `${clientId}-${Date.now()}`,
-              }),
-            );
+            client.ws.send(JSON.stringify({
+              type: "note_received",
+              from: sender.name,
+              text,
+              id: `${clientId}-${Date.now()}`,
+            }));
           }
         }
 
@@ -340,7 +425,7 @@ export function attachWebSocketServer(server: import("http").Server) {
 
       const hadVoted = session.voterIds.has(clientId);
       session.clients.delete(clientId);
-      session.voterIds.delete(clientId); // clean up vote on disconnect
+      session.voterIds.delete(clientId);
       session.voteCount = session.voterIds.size;
 
       if (session.clients.size === 0) {
@@ -348,17 +433,9 @@ export function attachWebSocketServer(server: import("http").Server) {
         logger.info({ sessionCode }, "Session ended (empty)");
       } else {
         const total = audienceCount(session);
-        broadcast(session, {
-          type: "presence_update",
-          presence: buildPresenceList(session),
-        });
-        // Only push a vote_update if the departing client held a vote
+        broadcast(session, { type: "presence_update", presence: buildPresenceList(session) });
         if (hadVoted) {
-          broadcastAll(session, {
-            type: "vote_update",
-            voteCount: session.voteCount,
-            totalAudience: total,
-          });
+          broadcastAll(session, { type: "vote_update", voteCount: session.voteCount, totalAudience: total });
         }
       }
     });
