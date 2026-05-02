@@ -1,10 +1,10 @@
 import {
-  DM_Sans_400Regular,
-  DM_Sans_500Medium,
-  DM_Sans_600SemiBold,
-  DM_Sans_700Bold,
+  PlayfairDisplay_400Regular,
+  PlayfairDisplay_600SemiBold,
+  PlayfairDisplay_700Bold,
+  PlayfairDisplay_900Black,
   useFonts,
-} from "@expo-google-fonts/dm-sans";
+} from "@expo-google-fonts/playfair-display";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -35,10 +35,10 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    DM_Sans_400Regular,
-    DM_Sans_500Medium,
-    DM_Sans_600SemiBold,
-    DM_Sans_700Bold,
+    PlayfairDisplay_400Regular,
+    PlayfairDisplay_600SemiBold,
+    PlayfairDisplay_700Bold,
+    PlayfairDisplay_900Black,
   });
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -32,19 +33,12 @@ export default function HomeScreen() {
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
   useEffect(() => {
-    if (code && role === "presenter") {
-      router.replace("/presenter");
-    } else if (code && role === "audience") {
-      router.replace("/audience");
-    }
+    if (code && role === "presenter") router.replace("/presenter");
+    else if (code && role === "audience") router.replace("/audience");
   }, [code, role]);
 
   useEffect(() => {
@@ -68,17 +62,6 @@ export default function HomeScreen() {
       tension: 300,
       friction: 28,
     }).start();
-  };
-
-  const handlePresent = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    createSession();
-  };
-
-  const handleJoin = () => {
-    if (!joinCode.trim()) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    joinSession(joinCode.trim().toUpperCase());
   };
 
   const bg = isDark ? "#0d0b08" : "#f4f1ec";
@@ -110,7 +93,12 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.header}>
-          <Text style={[styles.wordmark, { color: textPrimary }]}>SlideClicker</Text>
+          <Image
+            source={require("../assets/images/icon.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.wordmark, { color: textPrimary }]}>Next Slide, Please</Text>
           <Text style={[styles.tagline, { color: textSecondary }]}>
             Silent audience control for live talks
           </Text>
@@ -126,8 +114,8 @@ export default function HomeScreen() {
                     color: activeTab === "presenter" ? accent : textSecondary,
                     fontFamily:
                       activeTab === "presenter"
-                        ? "DM_Sans_600SemiBold"
-                        : "DM_Sans_400Regular",
+                        ? "PlayfairDisplay_700Bold"
+                        : "PlayfairDisplay_400Regular",
                   },
                 ]}
               >
@@ -142,8 +130,8 @@ export default function HomeScreen() {
                     color: activeTab === "audience" ? accent : textSecondary,
                     fontFamily:
                       activeTab === "audience"
-                        ? "DM_Sans_600SemiBold"
-                        : "DM_Sans_400Regular",
+                        ? "PlayfairDisplay_700Bold"
+                        : "PlayfairDisplay_400Regular",
                   },
                 ]}
               >
@@ -163,11 +151,7 @@ export default function HomeScreen() {
             <TextInput
               style={[
                 styles.input,
-                {
-                  backgroundColor: inputBg,
-                  borderColor: inputBorder,
-                  color: textPrimary,
-                },
+                { backgroundColor: inputBg, borderColor: inputBorder, color: textPrimary },
               ]}
               placeholder="Enter your name"
               placeholderTextColor={textSecondary}
@@ -189,6 +173,7 @@ export default function HomeScreen() {
                       backgroundColor: inputBg,
                       borderColor: error ? "#c94040" : inputBorder,
                       color: accent,
+                      fontFamily: "PlayfairDisplay_700Bold",
                     },
                   ]}
                   placeholder="XXXX"
@@ -200,27 +185,30 @@ export default function HomeScreen() {
                   }}
                   autoCapitalize="characters"
                   returnKeyType="join"
-                  onSubmitEditing={handleJoin}
+                  onSubmitEditing={() => joinSession(joinCode.trim().toUpperCase())}
                   maxLength={4}
                 />
               </>
             )}
 
-            {error && (
-              <Text style={styles.errorText}>{error}</Text>
-            )}
+            {error && <Text style={styles.errorText}>{error}</Text>}
 
             <Pressable
               style={({ pressed }) => [
                 styles.primaryButton,
                 { backgroundColor: accent, opacity: pressed ? 0.82 : 1 },
               ]}
-              onPress={activeTab === "presenter" ? handlePresent : handleJoin}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                activeTab === "presenter"
+                  ? createSession()
+                  : joinSession(joinCode.trim().toUpperCase());
+              }}
             >
               <Text style={styles.primaryButtonText}>
                 {activeTab === "presenter" ? "Start Session" : "Join Session"}
               </Text>
-              <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 6 }} />
+              <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 8 }} />
             </Pressable>
           </View>
         </Animated.View>
@@ -243,18 +231,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   header: {
+    alignItems: "center",
     marginBottom: 40,
   },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
   wordmark: {
-    fontSize: 32,
-    fontFamily: "DM_Sans_700Bold",
-    letterSpacing: -0.8,
+    fontSize: 28,
+    fontFamily: "PlayfairDisplay_700Bold",
+    letterSpacing: -0.3,
+    textAlign: "center",
     marginBottom: 6,
   },
   tagline: {
-    fontSize: 15,
-    fontFamily: "DM_Sans_400Regular",
-    lineHeight: 22,
+    fontSize: 14,
+    fontFamily: "PlayfairDisplay_400Regular",
+    textAlign: "center",
+    lineHeight: 20,
   },
   tabRow: {
     flexDirection: "row",
@@ -279,9 +276,9 @@ const styles = StyleSheet.create({
   },
   formBody: {},
   fieldLabel: {
-    fontSize: 12,
-    fontFamily: "DM_Sans_500Medium",
-    letterSpacing: 0.4,
+    fontSize: 11,
+    fontFamily: "PlayfairDisplay_400Regular",
+    letterSpacing: 0.8,
     marginBottom: 8,
     textTransform: "uppercase",
   },
@@ -291,19 +288,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
     fontSize: 16,
-    fontFamily: "DM_Sans_400Regular",
+    fontFamily: "PlayfairDisplay_400Regular",
   },
   codeInput: {
     textAlign: "center",
-    fontSize: 24,
-    fontFamily: "DM_Sans_700Bold",
+    fontSize: 26,
     letterSpacing: 10,
-    height: 60,
+    height: 62,
   },
   errorText: {
     color: "#c94040",
     fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
+    fontFamily: "PlayfairDisplay_400Regular",
     marginTop: 10,
   },
   primaryButton: {
@@ -317,12 +313,13 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#fefcf8",
     fontSize: 16,
-    fontFamily: "DM_Sans_600SemiBold",
+    fontFamily: "PlayfairDisplay_600SemiBold",
   },
   hint: {
     marginTop: 28,
     fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
+    fontFamily: "PlayfairDisplay_400Regular",
     lineHeight: 19,
+    textAlign: "center",
   },
 });

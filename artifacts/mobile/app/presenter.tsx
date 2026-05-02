@@ -34,7 +34,6 @@ function NoteToast({
       Animated.spring(slideAnim, { toValue: 0, tension: 260, friction: 24, useNativeDriver: true }),
       Animated.timing(opacityAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
     ]).start();
-
     const timer = setTimeout(() => dismiss(), 8000);
     return () => clearTimeout(timer);
   }, []);
@@ -60,7 +59,10 @@ function NoteToast({
     >
       <View style={styles.noteToastInner}>
         <Text style={[styles.noteFrom, { color: "#c96a2f" }]}>{note.from}</Text>
-        <Text style={[styles.noteText, { color: isDark ? "#ede9e1" : "#1a1612" }]} numberOfLines={3}>
+        <Text
+          style={[styles.noteText, { color: isDark ? "#ede9e1" : "#1a1612" }]}
+          numberOfLines={3}
+        >
           {note.text}
         </Text>
       </View>
@@ -96,17 +98,11 @@ export default function PresenterScreen() {
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
   useEffect(() => {
-    if (!code) {
-      router.replace("/");
-    }
+    if (!code) router.replace("/");
   }, [code]);
 
   const prevFlash = useRef(false);
@@ -136,16 +132,6 @@ export default function PresenterScreen() {
       pulseAnim.setValue(1);
     }
   }, [voteCount, totalAudience]);
-
-  const handleAdvance = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    advanceSlide();
-  };
-
-  const handleLeave = () => {
-    leaveSession();
-    router.replace("/");
-  };
 
   const bg = isDark ? "#0d0b08" : "#f4f1ec";
   const textPrimary = isDark ? "#ede9e1" : "#1a1612";
@@ -203,13 +189,18 @@ export default function PresenterScreen() {
       >
         <View style={styles.topBar}>
           <Pressable
-            onPress={handleLeave}
+            onPress={() => { leaveSession(); router.replace("/"); }}
             style={({ pressed }) => [styles.leaveBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
             <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
           </Pressable>
 
-          <View style={[styles.codePill, { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" }]}>
+          <View
+            style={[
+              styles.codePill,
+              { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" },
+            ]}
+          >
             <Text style={[styles.codeValue, { color: accent }]}>{code}</Text>
           </View>
 
@@ -238,19 +229,27 @@ export default function PresenterScreen() {
         >
           {hasVotes ? (
             <View style={styles.statusCardInner}>
-              <View style={[styles.statusDot, { backgroundColor: majorityReached ? accent : isDark ? "#3a3530" : "#e8e3db" }]} />
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: majorityReached ? accent : isDark ? "#3a3530" : "#e8e3db" },
+                ]}
+              />
               <View style={styles.statusTextBlock}>
                 <Text style={[styles.statusTitle, { color: textPrimary }]}>
                   {majorityReached ? "Majority wants to advance" : "Requests to advance"}
                 </Text>
                 <Text style={[styles.statusSub, { color: textSecondary }]}>
-                  {voteCount} of {totalAudience} {totalAudience === 1 ? "person" : "people"}
+                  {voteCount} of {totalAudience}{" "}
+                  {totalAudience === 1 ? "person" : "people"}
                 </Text>
               </View>
             </View>
           ) : (
             <View style={styles.statusCardInner}>
-              <View style={[styles.statusDot, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]} />
+              <View
+                style={[styles.statusDot, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]}
+              />
               <Text style={[styles.statusTitle, { color: textSecondary }]}>
                 {audienceMembers.length === 0
                   ? "Waiting for audience to join"
@@ -261,12 +260,16 @@ export default function PresenterScreen() {
         </Animated.View>
 
         {totalAudience > 0 && (
-          <View style={[styles.progressTrack, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]}>
+          <View
+            style={[styles.progressTrack, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]}
+          >
             <View
               style={[
                 styles.progressFill,
                 {
-                  backgroundColor: majorityReached ? accent : isDark ? "#5a4a3a" : "#c4a882",
+                  backgroundColor: majorityReached
+                    ? accent
+                    : isDark ? "#5a4a3a" : "#c4a882",
                   width: `${Math.min(ratio * 100, 100)}%`,
                 },
               ]}
@@ -285,7 +288,9 @@ export default function PresenterScreen() {
                 styles.resetBtn,
                 {
                   borderColor: divider,
-                  backgroundColor: isDark ? "rgba(237,233,225,0.04)" : "rgba(26,22,18,0.04)",
+                  backgroundColor: isDark
+                    ? "rgba(237,233,225,0.04)"
+                    : "rgba(26,22,18,0.04)",
                   opacity: pressed ? 0.6 : 1,
                 },
               ]}
@@ -294,7 +299,10 @@ export default function PresenterScreen() {
             </Pressable>
           )}
           <Pressable
-            onPress={handleAdvance}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              advanceSlide();
+            }}
             style={({ pressed }) => [
               styles.nextBtn,
               {
@@ -313,7 +321,13 @@ export default function PresenterScreen() {
         {audienceMembers.length > 0 && (
           <View style={[styles.memberRow, { borderTopColor: divider }]}>
             {audienceMembers.map((m, i) => (
-              <View key={i} style={[styles.memberChip, { backgroundColor: isDark ? "#2a2520" : "#eee9e1" }]}>
+              <View
+                key={i}
+                style={[
+                  styles.memberChip,
+                  { backgroundColor: isDark ? "#2a2520" : "#eee9e1" },
+                ]}
+              >
                 <View style={[styles.memberDot, { backgroundColor: "#3d8a6e" }]} />
                 <Text style={[styles.memberName, { color: textPrimary }]}>{m.name}</Text>
               </View>
@@ -327,32 +341,19 @@ export default function PresenterScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-  },
+  container: { flex: 1, paddingHorizontal: 24 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 28,
   },
-  leaveBtn: {
-    paddingVertical: 6,
-    paddingRight: 8,
-  },
-  leaveBtnText: {
-    fontSize: 14,
-    fontFamily: "DM_Sans_400Regular",
-  },
-  codePill: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
+  leaveBtn: { paddingVertical: 6, paddingRight: 8 },
+  leaveBtnText: { fontSize: 14, fontFamily: "PlayfairDisplay_400Regular" },
+  codePill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8 },
   codeValue: {
     fontSize: 17,
-    fontFamily: "DM_Sans_700Bold",
+    fontFamily: "PlayfairDisplay_700Bold",
     letterSpacing: 4,
   },
   audienceCount: {
@@ -362,25 +363,20 @@ const styles = StyleSheet.create({
     minWidth: 36,
     justifyContent: "flex-end",
   },
-  audienceCountText: {
-    fontSize: 13,
-    fontFamily: "DM_Sans_500Medium",
-  },
-  slideHero: {
-    marginBottom: 28,
-  },
+  audienceCountText: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
+  slideHero: { marginBottom: 28 },
   slideLabel: {
     fontSize: 12,
-    fontFamily: "DM_Sans_400Regular",
+    fontFamily: "PlayfairDisplay_400Regular",
     letterSpacing: 1.5,
     textTransform: "lowercase",
     marginBottom: 2,
   },
   slideNumber: {
     fontSize: 80,
-    fontFamily: "DM_Sans_700Bold",
+    fontFamily: "PlayfairDisplay_900Black",
     lineHeight: 84,
-    letterSpacing: -3,
+    letterSpacing: -2,
   },
   statusCard: {
     borderRadius: 14,
@@ -388,44 +384,19 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 14,
   },
-  statusCardInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    flexShrink: 0,
-  },
-  statusTextBlock: {
-    flex: 1,
-  },
-  statusTitle: {
-    fontSize: 15,
-    fontFamily: "DM_Sans_500Medium",
-  },
-  statusSub: {
-    fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
-    marginTop: 2,
-  },
+  statusCardInner: { flexDirection: "row", alignItems: "center", gap: 14 },
+  statusDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  statusTextBlock: { flex: 1 },
+  statusTitle: { fontSize: 15, fontFamily: "PlayfairDisplay_400Regular" },
+  statusSub: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular", marginTop: 2 },
   progressTrack: {
     height: 3,
     borderRadius: 2,
     overflow: "hidden",
     marginBottom: 22,
   },
-  progressFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
-  },
+  progressFill: { height: "100%", borderRadius: 2 },
+  actionRow: { flexDirection: "row", gap: 10, marginBottom: 24 },
   resetBtn: {
     height: 52,
     width: 52,
@@ -445,7 +416,7 @@ const styles = StyleSheet.create({
   nextBtnText: {
     color: "#fefcf8",
     fontSize: 16,
-    fontFamily: "DM_Sans_600SemiBold",
+    fontFamily: "PlayfairDisplay_600SemiBold",
   },
   memberRow: {
     borderTopWidth: 1,
@@ -462,15 +433,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 6,
   },
-  memberDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  memberName: {
-    fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
-  },
+  memberDot: { width: 6, height: 6, borderRadius: 3 },
+  memberName: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
   notesOverlay: {
     position: "absolute",
     left: 16,
@@ -491,15 +455,11 @@ const styles = StyleSheet.create({
   noteToastInner: { flex: 1 },
   noteFrom: {
     fontSize: 11,
-    fontFamily: "DM_Sans_600SemiBold",
-    letterSpacing: 0.4,
+    fontFamily: "PlayfairDisplay_600SemiBold",
+    letterSpacing: 0.6,
     textTransform: "uppercase",
     marginBottom: 3,
   },
-  noteText: {
-    fontSize: 14,
-    fontFamily: "DM_Sans_400Regular",
-    lineHeight: 20,
-  },
+  noteText: { fontSize: 14, fontFamily: "PlayfairDisplay_400Regular", lineHeight: 20 },
   noteDismiss: { paddingTop: 2 },
 });

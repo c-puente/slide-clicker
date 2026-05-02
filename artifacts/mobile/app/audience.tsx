@@ -44,11 +44,7 @@ export default function AudienceScreen() {
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
   useEffect(() => {
@@ -57,11 +53,7 @@ export default function AudienceScreen() {
 
   useEffect(() => {
     setHasVoted(false);
-    Animated.timing(checkAnim, {
-      toValue: 0,
-      duration: 180,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: true }).start();
   }, [slideNumber]);
 
   const toggleNote = () => {
@@ -95,22 +87,11 @@ export default function AudienceScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setHasVoted(true);
     voteNext();
-
     Animated.sequence([
       Animated.timing(pressAnim, { toValue: 0.96, duration: 80, useNativeDriver: true }),
       Animated.timing(pressAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
     ]).start();
-
-    Animated.timing(checkAnim, {
-      toValue: 1,
-      duration: 220,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleLeave = () => {
-    leaveSession();
-    router.replace("/");
+    Animated.timing(checkAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
   };
 
   const bg = isDark ? "#0d0b08" : "#f4f1ec";
@@ -123,11 +104,6 @@ export default function AudienceScreen() {
 
   const ratio = totalAudience > 0 ? voteCount / totalAudience : 0;
   const audienceMembers = presence.filter((p) => p.role === "audience");
-
-  const voteButtonBg = hasVoted
-    ? isDark ? "#251f18" : "#f0ece4"
-    : accent;
-  const voteButtonBorder = hasVoted ? accent : "transparent";
 
   return (
     <Animated.View style={[styles.flex, { backgroundColor: bg, opacity: fadeIn }]}>
@@ -142,13 +118,18 @@ export default function AudienceScreen() {
       >
         <View style={styles.topBar}>
           <Pressable
-            onPress={handleLeave}
+            onPress={() => { leaveSession(); router.replace("/"); }}
             style={({ pressed }) => [styles.leaveBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
             <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
           </Pressable>
 
-          <View style={[styles.codePill, { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" }]}>
+          <View
+            style={[
+              styles.codePill,
+              { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" },
+            ]}
+          >
             <Text style={[styles.codeValue, { color: accent }]}>{code}</Text>
           </View>
 
@@ -172,24 +153,33 @@ export default function AudienceScreen() {
             style={[
               styles.voteButton,
               {
-                backgroundColor: voteButtonBg,
-                borderColor: voteButtonBorder,
+                backgroundColor: hasVoted
+                  ? isDark ? "#251f18" : "#f0ece4"
+                  : accent,
+                borderColor: hasVoted ? accent : "transparent",
                 borderWidth: hasVoted ? 1.5 : 0,
               },
             ]}
           >
-            <Animated.View style={[styles.voteIconRow, { opacity: checkAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}>
-              <Feather name="arrow-right" size={22} color="#fefcf8" />
-            </Animated.View>
-            <Animated.View style={[styles.voteIconRow, styles.voteIconAbsolute, { opacity: checkAnim }]}>
-              <Feather name="check" size={22} color={accent} />
-            </Animated.View>
-            <Text
+            <Animated.View
               style={[
-                styles.voteButtonText,
-                { color: hasVoted ? accent : "#fefcf8" },
+                styles.voteIconRow,
+                {
+                  opacity: checkAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 0],
+                  }),
+                },
               ]}
             >
+              <Feather name="arrow-right" size={22} color="#fefcf8" />
+            </Animated.View>
+            <Animated.View
+              style={[styles.voteIconRow, styles.voteIconAbsolute, { opacity: checkAnim }]}
+            >
+              <Feather name="check" size={22} color={accent} />
+            </Animated.View>
+            <Text style={[styles.voteButtonText, { color: hasVoted ? accent : "#fefcf8" }]}>
               {hasVoted ? "Requested" : "Next Slide"}
             </Text>
             <Text
@@ -205,12 +195,18 @@ export default function AudienceScreen() {
 
         {totalAudience > 0 && (
           <View style={styles.voteStatus}>
-            <View style={[styles.progressTrack, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]}>
+            <View
+              style={[
+                styles.progressTrack,
+                { backgroundColor: isDark ? "#3a3530" : "#e8e3db" },
+              ]}
+            >
               <View
                 style={[
                   styles.progressFill,
                   {
-                    backgroundColor: ratio >= 0.5 ? accent : isDark ? "#5a4a3a" : "#c4a882",
+                    backgroundColor:
+                      ratio >= 0.5 ? accent : isDark ? "#5a4a3a" : "#c4a882",
                     width: `${Math.min(ratio * 100, 100)}%`,
                   },
                 ]}
@@ -228,22 +224,24 @@ export default function AudienceScreen() {
             {
               backgroundColor: surface,
               borderColor: noteOpen ? accent : inputBorder,
-              height: noteAnim.interpolate({ inputRange: [0, 1], outputRange: [46, 128] }),
+              height: noteAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [46, 128],
+              }),
             },
           ]}
         >
           {noteSent ? (
             <View style={styles.noteSentRow}>
               <Feather name="check" size={14} color="#3d8a6e" />
-              <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>Note sent to presenter</Text>
+              <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>
+                Note sent to presenter
+              </Text>
             </View>
           ) : noteOpen ? (
             <>
               <TextInput
-                style={[
-                  styles.noteInput,
-                  { color: textPrimary },
-                ]}
+                style={[styles.noteInput, { color: textPrimary }]}
                 placeholder="Write a note to the presenter…"
                 placeholderTextColor={textSecondary}
                 value={noteText}
@@ -260,17 +258,30 @@ export default function AudienceScreen() {
                   onPress={handleSendNote}
                   style={[
                     styles.noteSendBtn,
-                    { backgroundColor: noteText.trim() ? accent : isDark ? "#3a3530" : "#e8e3db" },
+                    {
+                      backgroundColor: noteText.trim()
+                        ? accent
+                        : isDark ? "#3a3530" : "#e8e3db",
+                    },
                   ]}
                 >
-                  <Text style={[styles.noteSendText, { color: noteText.trim() ? "#fefcf8" : textSecondary }]}>Send</Text>
+                  <Text
+                    style={[
+                      styles.noteSendText,
+                      { color: noteText.trim() ? "#fefcf8" : textSecondary },
+                    ]}
+                  >
+                    Send
+                  </Text>
                 </Pressable>
               </View>
             </>
           ) : (
             <Pressable style={styles.noteClosedRow} onPress={toggleNote}>
               <Feather name="message-square" size={14} color={textSecondary} />
-              <Text style={[styles.noteClosedText, { color: textSecondary }]}>Note to presenter</Text>
+              <Text style={[styles.noteClosedText, { color: textSecondary }]}>
+                Note to presenter
+              </Text>
               <Feather name="chevron-up" size={13} color={textSecondary} />
             </Pressable>
           )}
@@ -279,7 +290,13 @@ export default function AudienceScreen() {
         {audienceMembers.length > 0 && (
           <View style={[styles.memberRow, { borderTopColor: divider }]}>
             {audienceMembers.map((m, i) => (
-              <View key={i} style={[styles.memberChip, { backgroundColor: isDark ? "#2a2520" : "#eee9e1" }]}>
+              <View
+                key={i}
+                style={[
+                  styles.memberChip,
+                  { backgroundColor: isDark ? "#2a2520" : "#eee9e1" },
+                ]}
+              >
                 <View style={[styles.memberDot, { backgroundColor: "#3d8a6e" }]} />
                 <Text style={[styles.memberName, { color: textPrimary }]}>{m.name}</Text>
               </View>
@@ -293,34 +310,17 @@ export default function AudienceScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-  },
+  container: { flex: 1, paddingHorizontal: 24 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 28,
   },
-  leaveBtn: {
-    paddingVertical: 6,
-    paddingRight: 8,
-  },
-  leaveBtnText: {
-    fontSize: 14,
-    fontFamily: "DM_Sans_400Regular",
-  },
-  codePill: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  codeValue: {
-    fontSize: 17,
-    fontFamily: "DM_Sans_700Bold",
-    letterSpacing: 4,
-  },
+  leaveBtn: { paddingVertical: 6, paddingRight: 8 },
+  leaveBtnText: { fontSize: 14, fontFamily: "PlayfairDisplay_400Regular" },
+  codePill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8 },
+  codeValue: { fontSize: 17, fontFamily: "PlayfairDisplay_700Bold", letterSpacing: 4 },
   countSlot: {
     flexDirection: "row",
     alignItems: "center",
@@ -328,24 +328,19 @@ const styles = StyleSheet.create({
     minWidth: 36,
     justifyContent: "flex-end",
   },
-  countText: {
-    fontSize: 13,
-    fontFamily: "DM_Sans_500Medium",
-  },
-  slideHero: {
-    marginBottom: 24,
-  },
+  countText: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
+  slideHero: { marginBottom: 24 },
   slideLabel: {
     fontSize: 12,
-    fontFamily: "DM_Sans_400Regular",
+    fontFamily: "PlayfairDisplay_400Regular",
     letterSpacing: 1.5,
     marginBottom: 2,
   },
   slideNumber: {
     fontSize: 80,
-    fontFamily: "DM_Sans_700Bold",
+    fontFamily: "PlayfairDisplay_900Black",
     lineHeight: 84,
-    letterSpacing: -3,
+    letterSpacing: -2,
   },
   voteButton: {
     borderRadius: 14,
@@ -355,41 +350,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 18,
   },
-  voteIconRow: {
-    marginBottom: 14,
-  },
-  voteIconAbsolute: {
-    position: "absolute",
-    top: 0,
-    marginBottom: 0,
-  },
+  voteIconRow: { marginBottom: 14 },
+  voteIconAbsolute: { position: "absolute", top: 0, marginBottom: 0 },
   voteButtonText: {
     fontSize: 22,
-    fontFamily: "DM_Sans_700Bold",
+    fontFamily: "PlayfairDisplay_700Bold",
     marginBottom: 4,
   },
   voteButtonSub: {
     fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
+    fontFamily: "PlayfairDisplay_400Regular",
     textAlign: "center",
   },
-  voteStatus: {
-    marginBottom: 18,
-    gap: 8,
-  },
-  progressTrack: {
-    height: 3,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  voteText: {
-    fontSize: 12,
-    fontFamily: "DM_Sans_400Regular",
-  },
+  voteStatus: { marginBottom: 18, gap: 8 },
+  progressTrack: { height: 3, borderRadius: 2, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: 2 },
+  voteText: { fontSize: 12, fontFamily: "PlayfairDisplay_400Regular" },
   noteBar: {
     borderRadius: 10,
     borderWidth: 1,
@@ -399,19 +375,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     justifyContent: "center",
   },
-  noteClosedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  noteClosedText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
-  },
+  noteClosedRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  noteClosedText: { flex: 1, fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
   noteInput: {
     fontSize: 14,
-    fontFamily: "DM_Sans_400Regular",
+    fontFamily: "PlayfairDisplay_400Regular",
     minHeight: 50,
     textAlignVertical: "top",
     marginBottom: 8,
@@ -423,32 +391,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  noteCancelBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  noteCancelText: {
-    fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
-  },
-  noteSendBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 7,
-  },
-  noteSendText: {
-    fontSize: 13,
-    fontFamily: "DM_Sans_600SemiBold",
-  },
-  noteSentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  noteSentText: {
-    fontSize: 13,
-    fontFamily: "DM_Sans_500Medium",
-  },
+  noteCancelBtn: { paddingHorizontal: 10, paddingVertical: 6 },
+  noteCancelText: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
+  noteSendBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 7 },
+  noteSendText: { fontSize: 13, fontFamily: "PlayfairDisplay_600SemiBold" },
+  noteSentRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  noteSentText: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
   memberRow: {
     borderTopWidth: 1,
     paddingTop: 14,
@@ -464,13 +412,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 6,
   },
-  memberDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  memberName: {
-    fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
-  },
+  memberDot: { width: 6, height: 6, borderRadius: 3 },
+  memberName: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
 });

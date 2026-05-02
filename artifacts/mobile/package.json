@@ -56,6 +56,6 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "@expo-google-fonts/dm-sans": "^0.4.2"
+    "@expo-google-fonts/playfair-display": "^0.4.2"
   }
 }
