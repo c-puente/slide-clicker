@@ -205,9 +205,10 @@ export default function HomeScreen() {
               disabled={isLoading}
               style={({ pressed }) => [
                 styles.primaryButton,
-                { backgroundColor: accent, opacity: isLoading ? 0.75 : pressed ? 0.82 : 1 },
+                { backgroundColor: accent, opacity: isLoading ? 0.78 : pressed ? 0.82 : 1 },
               ]}
               onPress={() => {
+                clearError();
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setIsLoading(true);
                 activeTab === "presenter"
@@ -215,20 +216,13 @@ export default function HomeScreen() {
                   : joinSession(joinCode.trim().toUpperCase());
               }}
             >
+              <Text style={styles.primaryButtonText}>
+                {activeTab === "presenter" ? "Start Session" : "Join Session"}
+              </Text>
               {isLoading ? (
-                <>
-                  <ActivityIndicator size="small" color="#fefcf8" style={{ marginRight: 10 }} />
-                  <Text style={styles.primaryButtonText}>
-                    {activeTab === "presenter" ? "Starting…" : "Joining…"}
-                  </Text>
-                </>
+                <ActivityIndicator size="small" color="#fefcf8" style={{ marginLeft: 10 }} />
               ) : (
-                <>
-                  <Text style={styles.primaryButtonText}>
-                    {activeTab === "presenter" ? "Start Session" : "Join Session"}
-                  </Text>
-                  <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 8 }} />
-                </>
+                <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 8 }} />
               )}
             </Pressable>
           </View>
