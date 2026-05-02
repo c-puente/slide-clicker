@@ -15,6 +15,12 @@ interface PresenceMember {
   role: Role;
 }
 
+export interface Note {
+  id: string;
+  from: string;
+  text: string;
+}
+
 interface SessionState {
   code: string | null;
   role: Role | null;
@@ -26,6 +32,7 @@ interface SessionState {
   connected: boolean;
   error: string | null;
   triggerFlash: boolean;
+  notes: Note[];
 }
 
 interface SessionActions {
@@ -37,6 +44,8 @@ interface SessionActions {
   resetVotes: () => void;
   leaveSession: () => void;
   clearError: () => void;
+  sendNote: (text: string) => void;
+  dismissNote: (id: string) => void;
 }
 
 const defaultState: SessionState = {
@@ -50,6 +59,7 @@ const defaultState: SessionState = {
   connected: false,
   error: null,
   triggerFlash: false,
+  notes: [],
 };
 
 const SessionContext = createContext<SessionState & SessionActions>({
@@ -62,6 +72,8 @@ const SessionContext = createContext<SessionState & SessionActions>({
   resetVotes: () => {},
   leaveSession: () => {},
   clearError: () => {},
+  sendNote: () => {},
+  dismissNote: () => {},
 });
 
 export function useSession() {
@@ -169,6 +181,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             totalAudience: (msg["totalAudience"] as number) ?? s.totalAudience,
             triggerFlash: false,
           }));
+        } else if (type === "note_received") {
+          setState((s) => ({
+            ...s,
+            notes: [
+              ...s.notes,
+              {
+                id: (msg["id"] as string) ?? `${Date.now()}`,
+                from: (msg["from"] as string) ?? "Someone",
+                text: (msg["text"] as string) ?? "",
+              },
+            ],
+          }));
         } else if (type === "error") {
           setState((s) => ({
             ...s,
@@ -237,6 +261,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, error: null }));
   }, []);
 
+  const sendNote = useCallback((text: string) => {
+    send({ type: "send_note", text });
+  }, [send]);
+
+  const dismissNote = useCallback((id: string) => {
+    setState((s) => ({ ...s, notes: s.notes.filter((n) => n.id !== id) }));
+  }, []);
+
   return (
     <SessionContext.Provider
       value={{
@@ -249,6 +281,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         resetVotes,
         leaveSession,
         clearError,
+        sendNote,
+        dismissNote,
       }}
     >
       {children}

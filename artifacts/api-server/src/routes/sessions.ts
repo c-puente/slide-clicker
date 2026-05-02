@@ -200,6 +200,31 @@ export function attachWebSocketServer(server: import("http").Server) {
           voteCount: 0,
           totalAudience,
         });
+      } else if (type === "send_note") {
+        if (!sessionCode || !clientId) return;
+        const session = sessions.get(sessionCode);
+        if (!session) return;
+
+        const sender = session.clients.get(clientId);
+        if (!sender || sender.role !== "audience") return;
+
+        const text = ((msg["text"] as string) ?? "").trim().slice(0, 280);
+        if (!text) return;
+
+        for (const client of session.clients.values()) {
+          if (client.role === "presenter" && client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(
+              JSON.stringify({
+                type: "note_received",
+                from: sender.name,
+                text,
+                id: `${clientId}-${Date.now()}`,
+              }),
+            );
+          }
+        }
+
+        logger.info({ sessionCode, from: sender.name }, "Note sent to presenter");
       }
     });
 

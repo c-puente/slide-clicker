@@ -6,6 +6,7 @@ import {
   Animated,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -14,6 +15,64 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSession } from "@/context/SessionContext";
+import type { Note } from "@/context/SessionContext";
+
+function NoteToast({
+  note,
+  onDismiss,
+  isDark,
+}: {
+  note: Note;
+  onDismiss: () => void;
+  isDark: boolean;
+}) {
+  const slideAnim = useRef(new Animated.Value(-100)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(slideAnim, { toValue: 0, tension: 200, friction: 20, useNativeDriver: true }),
+      Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+
+    const timer = setTimeout(() => dismiss(), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const dismiss = () => {
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: -100, duration: 250, useNativeDriver: true }),
+      Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => onDismiss());
+  };
+
+  return (
+    <Animated.View
+      style={[
+        styles.noteToast,
+        {
+          backgroundColor: isDark ? "#1e1e36" : "#ffffff",
+          borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+          transform: [{ translateY: slideAnim }],
+          opacity: opacityAnim,
+        },
+      ]}
+    >
+      <View style={styles.noteToastLeft}>
+        <View style={[styles.noteAvatar, { backgroundColor: isDark ? "rgba(91,92,255,0.2)" : "rgba(91,92,255,0.12)" }]}>
+          <Feather name="message-circle" size={14} color="#5b5cff" />
+        </View>
+        <View style={styles.noteToastContent}>
+          <Text style={[styles.noteFrom, { color: isDark ? "#8888aa" : "#666680" }]}>{note.from}</Text>
+          <Text style={[styles.noteText, { color: isDark ? "#ffffff" : "#0a0a0a" }]} numberOfLines={3}>{note.text}</Text>
+        </View>
+      </View>
+      <Pressable onPress={dismiss} hitSlop={12}>
+        <Feather name="x" size={16} color={isDark ? "#666688" : "#999aaa"} />
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export default function PresenterScreen() {
   const {
@@ -26,6 +85,8 @@ export default function PresenterScreen() {
     advanceSlide,
     resetVotes,
     leaveSession,
+    notes,
+    dismissNote,
   } = useSession();
 
   const router = useRouter();
@@ -145,6 +206,31 @@ export default function PresenterScreen() {
 
   return (
     <Animated.View style={[styles.flex, { backgroundColor: bg, opacity: fadeIn }]}>
+      {notes.length > 0 && (
+        <View
+          style={[
+            styles.notesOverlay,
+            { top: Platform.OS === "web" ? 67 + insets.top : insets.top + 60 },
+          ]}
+          pointerEvents="box-none"
+        >
+          <ScrollView
+            style={styles.notesScroll}
+            contentContainerStyle={styles.notesScrollContent}
+            showsVerticalScrollIndicator={false}
+            pointerEvents="box-none"
+          >
+            {notes.map((note) => (
+              <NoteToast
+                key={note.id}
+                note={note}
+                onDismiss={() => dismissNote(note.id)}
+                isDark={isDark}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      )}
       <View
         style={[
           styles.container,
@@ -513,5 +599,62 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
+  },
+  notesOverlay: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    zIndex: 99,
+    maxHeight: 280,
+  },
+  notesScroll: {
+    flex: 1,
+  },
+  notesScrollContent: {
+    gap: 8,
+  },
+  noteToast: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  noteToastLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  noteAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  noteToastContent: {
+    flex: 1,
+  },
+  noteFrom: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.3,
+    marginBottom: 3,
+    textTransform: "uppercase",
+  },
+  noteText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
   },
 });

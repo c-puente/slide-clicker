@@ -4,10 +4,12 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Keyboard,
   Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
   useColorScheme,
 } from "react-native";
@@ -24,6 +26,7 @@ export default function AudienceScreen() {
     presence,
     voteNext,
     leaveSession,
+    sendNote,
   } = useSession();
 
   const router = useRouter();
@@ -32,6 +35,10 @@ export default function AudienceScreen() {
   const isDark = colorScheme === "dark";
 
   const [hasVoted, setHasVoted] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [noteSent, setNoteSent] = useState(false);
+  const noteAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const checkAnim = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
@@ -56,6 +63,34 @@ export default function AudienceScreen() {
       useNativeDriver: true,
     }).start();
   }, [slideNumber]);
+
+  const toggleNote = () => {
+    const opening = !noteOpen;
+    setNoteOpen(opening);
+    if (opening) {
+      setNoteSent(false);
+    } else {
+      Keyboard.dismiss();
+    }
+    Animated.spring(noteAnim, {
+      toValue: opening ? 1 : 0,
+      tension: 200,
+      friction: 22,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const handleSendNote = () => {
+    if (!noteText.trim()) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    sendNote(noteText.trim());
+    setNoteText("");
+    setNoteSent(true);
+    Keyboard.dismiss();
+    setTimeout(() => {
+      toggleNote();
+    }, 1200);
+  };
 
   const handleVote = () => {
     if (hasVoted) return;
@@ -268,6 +303,66 @@ export default function AudienceScreen() {
           </View>
         )}
 
+        <Animated.View
+          style={[
+            styles.noteBar,
+            {
+              backgroundColor: isDark ? "#1a1a2e" : "#ffffff",
+              borderColor: noteOpen
+                ? accent
+                : isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+              height: noteAnim.interpolate({ inputRange: [0, 1], outputRange: [48, 130] }),
+            },
+          ]}
+        >
+          {noteSent ? (
+            <View style={styles.noteSentRow}>
+              <Feather name="check-circle" size={16} color="#22cc88" />
+              <Text style={[styles.noteSentText, { color: "#22cc88" }]}>Note sent!</Text>
+            </View>
+          ) : noteOpen ? (
+            <>
+              <TextInput
+                style={[
+                  styles.noteInput,
+                  {
+                    color: textPrimary,
+                    backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
+                  },
+                ]}
+                placeholder="Write a note to the presenter…"
+                placeholderTextColor={textSecondary}
+                value={noteText}
+                onChangeText={setNoteText}
+                multiline
+                maxLength={280}
+                autoFocus
+              />
+              <View style={styles.noteActions}>
+                <Pressable onPress={toggleNote} style={styles.noteCancelBtn}>
+                  <Text style={[styles.noteCancelText, { color: textSecondary }]}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSendNote}
+                  style={[
+                    styles.noteSendBtn,
+                    { backgroundColor: noteText.trim() ? accent : isDark ? "rgba(91,92,255,0.3)" : "rgba(91,92,255,0.2)" },
+                  ]}
+                >
+                  <Feather name="send" size={13} color="#fff" />
+                  <Text style={styles.noteSendText}>Send</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <Pressable style={styles.noteClosedRow} onPress={toggleNote}>
+              <Feather name="message-circle" size={16} color={textSecondary} />
+              <Text style={[styles.noteClosedText, { color: textSecondary }]}>Note to presenter</Text>
+              <Feather name="chevron-up" size={14} color={textSecondary} />
+            </Pressable>
+          )}
+        </Animated.View>
+
         {audienceMembers.length > 0 && (
           <View style={[styles.membersList, { borderColor: border }]}>
             <Text style={[styles.membersTitle, { color: textSecondary }]}>
@@ -445,6 +540,71 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  noteBar: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    overflow: "hidden",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    justifyContent: "center",
+  },
+  noteClosedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  noteClosedText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+  },
+  noteInput: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minHeight: 52,
+    textAlignVertical: "top",
+    marginBottom: 8,
+  },
+  noteActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  noteCancelBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  noteCancelText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  noteSendBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  noteSendText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  noteSentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    justifyContent: "center",
+  },
+  noteSentText: {
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
   },
 });
