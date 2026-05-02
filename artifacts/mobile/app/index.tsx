@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -28,6 +29,7 @@ export default function HomeScreen() {
 
   const [joinCode, setJoinCode] = useState("");
   const [activeTab, setActiveTab] = useState<"presenter" | "audience">("presenter");
+  const [isLoading, setIsLoading] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -37,12 +39,18 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (code && role === "presenter") router.replace("/presenter");
-    else if (code && role === "audience") router.replace("/audience");
+    if (code && role === "presenter") {
+      setIsLoading(false);
+      router.replace("/presenter");
+    } else if (code && role === "audience") {
+      setIsLoading(false);
+      router.replace("/audience");
+    }
   }, [code, role]);
 
   useEffect(() => {
     if (error) {
+      setIsLoading(false);
       Animated.sequence([
         Animated.timing(shakeAnim, { toValue: 7, duration: 55, useNativeDriver: true }),
         Animated.timing(shakeAnim, { toValue: -7, duration: 55, useNativeDriver: true }),
@@ -55,6 +63,7 @@ export default function HomeScreen() {
   const switchTab = (tab: "presenter" | "audience") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     clearError();
+    setIsLoading(false);
     setActiveTab(tab);
     Animated.spring(slideAnim, {
       toValue: tab === "audience" ? 1 : 0,
@@ -193,21 +202,34 @@ export default function HomeScreen() {
             {error && <Text style={styles.errorText}>{error}</Text>}
 
             <Pressable
+              disabled={isLoading}
               style={({ pressed }) => [
                 styles.primaryButton,
-                { backgroundColor: accent, opacity: pressed ? 0.82 : 1 },
+                { backgroundColor: accent, opacity: isLoading ? 0.75 : pressed ? 0.82 : 1 },
               ]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setIsLoading(true);
                 activeTab === "presenter"
                   ? createSession()
                   : joinSession(joinCode.trim().toUpperCase());
               }}
             >
-              <Text style={styles.primaryButtonText}>
-                {activeTab === "presenter" ? "Start Session" : "Join Session"}
-              </Text>
-              <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 8 }} />
+              {isLoading ? (
+                <>
+                  <ActivityIndicator size="small" color="#fefcf8" style={{ marginRight: 10 }} />
+                  <Text style={styles.primaryButtonText}>
+                    {activeTab === "presenter" ? "Starting…" : "Joining…"}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.primaryButtonText}>
+                    {activeTab === "presenter" ? "Start Session" : "Join Session"}
+                  </Text>
+                  <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 8 }} />
+                </>
+              )}
             </Pressable>
           </View>
         </Animated.View>
