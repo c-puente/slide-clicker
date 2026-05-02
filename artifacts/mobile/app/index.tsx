@@ -33,7 +33,7 @@ export default function HomeScreen() {
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
   }, []);
 
   useEffect(() => {
@@ -114,8 +114,8 @@ export default function HomeScreen() {
                     color: activeTab === "presenter" ? accent : textSecondary,
                     fontFamily:
                       activeTab === "presenter"
-                        ? "PlayfairDisplay_700Bold"
-                        : "PlayfairDisplay_400Regular",
+                        ? "PlusJakartaSans_600SemiBold"
+                        : "PlusJakartaSans_400Regular",
                   },
                 ]}
               >
@@ -130,8 +130,8 @@ export default function HomeScreen() {
                     color: activeTab === "audience" ? accent : textSecondary,
                     fontFamily:
                       activeTab === "audience"
-                        ? "PlayfairDisplay_700Bold"
-                        : "PlayfairDisplay_400Regular",
+                        ? "PlusJakartaSans_600SemiBold"
+                        : "PlusJakartaSans_400Regular",
                   },
                 ]}
               >
@@ -173,7 +173,6 @@ export default function HomeScreen() {
                       backgroundColor: inputBg,
                       borderColor: error ? "#c94040" : inputBorder,
                       color: accent,
-                      fontFamily: "PlayfairDisplay_700Bold",
                     },
                   ]}
                   placeholder="XXXX"
@@ -232,40 +231,42 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginBottom: 40,
+    marginBottom: 36,
   },
   logo: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    marginBottom: 16,
+    width: 60,
+    height: 60,
+    borderRadius: 14,
+    marginBottom: 14,
   },
   wordmark: {
-    fontSize: 28,
-    fontFamily: "PlayfairDisplay_700Bold",
-    letterSpacing: -0.3,
+    fontSize: 22,
+    fontFamily: "PlusJakartaSans_700Bold",
+    letterSpacing: -0.4,
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 5,
   },
   tagline: {
-    fontSize: 14,
-    fontFamily: "PlayfairDisplay_400Regular",
+    fontSize: 13,
+    fontFamily: "PlusJakartaSans_400Regular",
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 19,
+    letterSpacing: 0.1,
   },
   tabRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    marginBottom: 28,
+    marginBottom: 26,
     position: "relative",
   },
   tab: {
     flex: 1,
-    paddingBottom: 12,
+    paddingBottom: 11,
     alignItems: "center",
   },
   tabLabel: {
-    fontSize: 14,
+    fontSize: 13,
+    letterSpacing: 0.1,
   },
   tabUnderline: {
     position: "absolute",
@@ -277,49 +278,53 @@ const styles = StyleSheet.create({
   formBody: {},
   fieldLabel: {
     fontSize: 11,
-    fontFamily: "PlayfairDisplay_400Regular",
-    letterSpacing: 0.8,
-    marginBottom: 8,
+    fontFamily: "PlusJakartaSans_500Medium",
+    letterSpacing: 0.6,
+    marginBottom: 7,
     textTransform: "uppercase",
   },
   input: {
-    height: 50,
+    height: 48,
     borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 14,
-    fontSize: 16,
-    fontFamily: "PlayfairDisplay_400Regular",
+    fontSize: 15,
+    fontFamily: "PlusJakartaSans_400Regular",
+    letterSpacing: 0.1,
   },
   codeInput: {
     textAlign: "center",
     fontSize: 26,
+    fontFamily: "PlusJakartaSans_800ExtraBold",
     letterSpacing: 10,
-    height: 62,
+    height: 60,
   },
   errorText: {
     color: "#c94040",
-    fontSize: 13,
-    fontFamily: "PlayfairDisplay_400Regular",
-    marginTop: 10,
+    fontSize: 12,
+    fontFamily: "PlusJakartaSans_400Regular",
+    marginTop: 8,
   },
   primaryButton: {
-    height: 52,
+    height: 50,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    marginTop: 24,
+    marginTop: 22,
   },
   primaryButtonText: {
     color: "#fefcf8",
-    fontSize: 16,
-    fontFamily: "PlayfairDisplay_600SemiBold",
+    fontSize: 15,
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    letterSpacing: 0.1,
   },
   hint: {
-    marginTop: 28,
-    fontSize: 13,
-    fontFamily: "PlayfairDisplay_400Regular",
-    lineHeight: 19,
+    marginTop: 24,
+    fontSize: 12,
+    fontFamily: "PlusJakartaSans_400Regular",
+    lineHeight: 18,
     textAlign: "center",
+    letterSpacing: 0.1,
   },
 });

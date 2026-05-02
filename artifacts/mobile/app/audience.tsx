@@ -44,7 +44,7 @@ export default function AudienceScreen() {
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: true }).start();
   }, []);
 
   useEffect(() => {
@@ -172,12 +172,12 @@ export default function AudienceScreen() {
                 },
               ]}
             >
-              <Feather name="arrow-right" size={22} color="#fefcf8" />
+              <Feather name="arrow-right" size={20} color="#fefcf8" />
             </Animated.View>
             <Animated.View
               style={[styles.voteIconRow, styles.voteIconAbsolute, { opacity: checkAnim }]}
             >
-              <Feather name="check" size={22} color={accent} />
+              <Feather name="check" size={20} color={accent} />
             </Animated.View>
             <Text style={[styles.voteButtonText, { color: hasVoted ? accent : "#fefcf8" }]}>
               {hasVoted ? "Requested" : "Next Slide"}
@@ -205,8 +205,7 @@ export default function AudienceScreen() {
                 style={[
                   styles.progressFill,
                   {
-                    backgroundColor:
-                      ratio >= 0.5 ? accent : isDark ? "#5a4a3a" : "#c4a882",
+                    backgroundColor: ratio >= 0.5 ? accent : isDark ? "#5a4a3a" : "#c4a882",
                     width: `${Math.min(ratio * 100, 100)}%`,
                   },
                 ]}
@@ -226,14 +225,14 @@ export default function AudienceScreen() {
               borderColor: noteOpen ? accent : inputBorder,
               height: noteAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: [46, 128],
+                outputRange: [44, 126],
               }),
             },
           ]}
         >
           {noteSent ? (
             <View style={styles.noteSentRow}>
-              <Feather name="check" size={14} color="#3d8a6e" />
+              <Feather name="check" size={13} color="#3d8a6e" />
               <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>
                 Note sent to presenter
               </Text>
@@ -278,7 +277,7 @@ export default function AudienceScreen() {
             </>
           ) : (
             <Pressable style={styles.noteClosedRow} onPress={toggleNote}>
-              <Feather name="message-square" size={14} color={textSecondary} />
+              <Feather name="message-square" size={13} color={textSecondary} />
               <Text style={[styles.noteClosedText, { color: textSecondary }]}>
                 Note to presenter
               </Text>
@@ -292,10 +291,7 @@ export default function AudienceScreen() {
             {audienceMembers.map((m, i) => (
               <View
                 key={i}
-                style={[
-                  styles.memberChip,
-                  { backgroundColor: isDark ? "#2a2520" : "#eee9e1" },
-                ]}
+                style={[styles.memberChip, { backgroundColor: isDark ? "#2a2520" : "#eee9e1" }]}
               >
                 <View style={[styles.memberDot, { backgroundColor: "#3d8a6e" }]} />
                 <Text style={[styles.memberName, { color: textPrimary }]}>{m.name}</Text>
@@ -318,9 +314,9 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   leaveBtn: { paddingVertical: 6, paddingRight: 8 },
-  leaveBtnText: { fontSize: 14, fontFamily: "PlayfairDisplay_400Regular" },
-  codePill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8 },
-  codeValue: { fontSize: 17, fontFamily: "PlayfairDisplay_700Bold", letterSpacing: 4 },
+  leaveBtnText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
+  codePill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
+  codeValue: { fontSize: 16, fontFamily: "PlusJakartaSans_800ExtraBold", letterSpacing: 5 },
   countSlot: {
     flexDirection: "row",
     alignItems: "center",
@@ -328,62 +324,66 @@ const styles = StyleSheet.create({
     minWidth: 36,
     justifyContent: "flex-end",
   },
-  countText: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
-  slideHero: { marginBottom: 24 },
+  countText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular" },
+  slideHero: { marginBottom: 22 },
   slideLabel: {
-    fontSize: 12,
-    fontFamily: "PlayfairDisplay_400Regular",
-    letterSpacing: 1.5,
-    marginBottom: 2,
+    fontSize: 11,
+    fontFamily: "PlusJakartaSans_500Medium",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
   slideNumber: {
-    fontSize: 80,
-    fontFamily: "PlayfairDisplay_900Black",
-    lineHeight: 84,
-    letterSpacing: -2,
+    fontSize: 76,
+    fontFamily: "PlusJakartaSans_800ExtraBold",
+    lineHeight: 80,
+    letterSpacing: -2.5,
   },
   voteButton: {
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 36,
+    paddingVertical: 34,
     paddingHorizontal: 24,
-    marginBottom: 18,
+    marginBottom: 16,
   },
-  voteIconRow: { marginBottom: 14 },
+  voteIconRow: { marginBottom: 12 },
   voteIconAbsolute: { position: "absolute", top: 0, marginBottom: 0 },
   voteButtonText: {
-    fontSize: 22,
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 20,
+    fontFamily: "PlusJakartaSans_700Bold",
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   voteButtonSub: {
-    fontSize: 13,
-    fontFamily: "PlayfairDisplay_400Regular",
+    fontSize: 12,
+    fontFamily: "PlusJakartaSans_400Regular",
     textAlign: "center",
+    letterSpacing: 0.1,
   },
-  voteStatus: { marginBottom: 18, gap: 8 },
+  voteStatus: { marginBottom: 16, gap: 7 },
   progressTrack: { height: 3, borderRadius: 2, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
-  voteText: { fontSize: 12, fontFamily: "PlayfairDisplay_400Regular" },
+  voteText: { fontSize: 11, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
   noteBar: {
     borderRadius: 10,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 14,
     overflow: "hidden",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
     justifyContent: "center",
   },
   noteClosedRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  noteClosedText: { flex: 1, fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
+  noteClosedText: { flex: 1, fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
   noteInput: {
-    fontSize: 14,
-    fontFamily: "PlayfairDisplay_400Regular",
-    minHeight: 50,
+    fontSize: 13,
+    fontFamily: "PlusJakartaSans_400Regular",
+    minHeight: 48,
     textAlignVertical: "top",
-    marginBottom: 8,
+    marginBottom: 6,
     paddingTop: 4,
+    letterSpacing: 0.1,
   },
   noteActions: {
     flexDirection: "row",
@@ -391,12 +391,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  noteCancelBtn: { paddingHorizontal: 10, paddingVertical: 6 },
-  noteCancelText: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
-  noteSendBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 7 },
-  noteSendText: { fontSize: 13, fontFamily: "PlayfairDisplay_600SemiBold" },
+  noteCancelBtn: { paddingHorizontal: 10, paddingVertical: 5 },
+  noteCancelText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular" },
+  noteSendBtn: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 7 },
+  noteSendText: { fontSize: 13, fontFamily: "PlusJakartaSans_600SemiBold" },
   noteSentRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  noteSentText: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
+  noteSentText: { fontSize: 13, fontFamily: "PlusJakartaSans_500Medium" },
   memberRow: {
     borderTopWidth: 1,
     paddingTop: 14,
@@ -408,10 +408,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 6,
     gap: 6,
   },
   memberDot: { width: 6, height: 6, borderRadius: 3 },
-  memberName: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
+  memberName: { fontSize: 12, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
 });

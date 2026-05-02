@@ -98,7 +98,7 @@ export default function PresenterScreen() {
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: true }).start();
   }, []);
 
   useEffect(() => {
@@ -122,8 +122,8 @@ export default function PresenterScreen() {
     if (ratio >= 0.5 && totalAudience > 0) {
       const pulse = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.04, duration: 800, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.03, duration: 900, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
         ]),
       );
       pulse.start();
@@ -267,9 +267,7 @@ export default function PresenterScreen() {
               style={[
                 styles.progressFill,
                 {
-                  backgroundColor: majorityReached
-                    ? accent
-                    : isDark ? "#5a4a3a" : "#c4a882",
+                  backgroundColor: majorityReached ? accent : isDark ? "#5a4a3a" : "#c4a882",
                   width: `${Math.min(ratio * 100, 100)}%`,
                 },
               ]}
@@ -314,7 +312,7 @@ export default function PresenterScreen() {
             ]}
           >
             <Text style={styles.nextBtnText}>Next Slide</Text>
-            <Feather name="arrow-right" size={17} color="#fefcf8" style={{ marginLeft: 6 }} />
+            <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 6 }} />
           </Pressable>
         </View>
 
@@ -323,10 +321,7 @@ export default function PresenterScreen() {
             {audienceMembers.map((m, i) => (
               <View
                 key={i}
-                style={[
-                  styles.memberChip,
-                  { backgroundColor: isDark ? "#2a2520" : "#eee9e1" },
-                ]}
+                style={[styles.memberChip, { backgroundColor: isDark ? "#2a2520" : "#eee9e1" }]}
               >
                 <View style={[styles.memberDot, { backgroundColor: "#3d8a6e" }]} />
                 <Text style={[styles.memberName, { color: textPrimary }]}>{m.name}</Text>
@@ -349,12 +344,12 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   leaveBtn: { paddingVertical: 6, paddingRight: 8 },
-  leaveBtnText: { fontSize: 14, fontFamily: "PlayfairDisplay_400Regular" },
-  codePill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8 },
+  leaveBtnText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
+  codePill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   codeValue: {
-    fontSize: 17,
-    fontFamily: "PlayfairDisplay_700Bold",
-    letterSpacing: 4,
+    fontSize: 16,
+    fontFamily: "PlusJakartaSans_800ExtraBold",
+    letterSpacing: 5,
   },
   audienceCount: {
     flexDirection: "row",
@@ -363,64 +358,60 @@ const styles = StyleSheet.create({
     minWidth: 36,
     justifyContent: "flex-end",
   },
-  audienceCountText: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
-  slideHero: { marginBottom: 28 },
+  audienceCountText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular" },
+  slideHero: { marginBottom: 24 },
   slideLabel: {
-    fontSize: 12,
-    fontFamily: "PlayfairDisplay_400Regular",
-    letterSpacing: 1.5,
-    textTransform: "lowercase",
-    marginBottom: 2,
+    fontSize: 11,
+    fontFamily: "PlusJakartaSans_500Medium",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
   slideNumber: {
-    fontSize: 80,
-    fontFamily: "PlayfairDisplay_900Black",
-    lineHeight: 84,
-    letterSpacing: -2,
+    fontSize: 76,
+    fontFamily: "PlusJakartaSans_800ExtraBold",
+    lineHeight: 80,
+    letterSpacing: -2.5,
   },
   statusCard: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    padding: 18,
-    marginBottom: 14,
+    padding: 16,
+    marginBottom: 12,
   },
-  statusCardInner: { flexDirection: "row", alignItems: "center", gap: 14 },
-  statusDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  statusCardInner: { flexDirection: "row", alignItems: "center", gap: 12 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   statusTextBlock: { flex: 1 },
-  statusTitle: { fontSize: 15, fontFamily: "PlayfairDisplay_400Regular" },
-  statusSub: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular", marginTop: 2 },
-  progressTrack: {
-    height: 3,
-    borderRadius: 2,
-    overflow: "hidden",
-    marginBottom: 22,
-  },
+  statusTitle: { fontSize: 14, fontFamily: "PlusJakartaSans_500Medium", letterSpacing: 0.1 },
+  statusSub: { fontSize: 12, fontFamily: "PlusJakartaSans_400Regular", marginTop: 2, letterSpacing: 0.1 },
+  progressTrack: { height: 3, borderRadius: 2, overflow: "hidden", marginBottom: 20 },
   progressFill: { height: "100%", borderRadius: 2 },
-  actionRow: { flexDirection: "row", gap: 10, marginBottom: 24 },
+  actionRow: { flexDirection: "row", gap: 10, marginBottom: 22 },
   resetBtn: {
-    height: 52,
-    width: 52,
+    height: 50,
+    width: 50,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
   },
   nextBtn: {
-    height: 52,
+    height: 50,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
   },
   nextBtnText: {
     color: "#fefcf8",
-    fontSize: 16,
-    fontFamily: "PlayfairDisplay_600SemiBold",
+    fontSize: 15,
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    letterSpacing: 0.1,
   },
   memberRow: {
     borderTopWidth: 1,
-    paddingTop: 16,
+    paddingTop: 14,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
@@ -429,12 +420,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 6,
     gap: 6,
   },
   memberDot: { width: 6, height: 6, borderRadius: 3 },
-  memberName: { fontSize: 13, fontFamily: "PlayfairDisplay_400Regular" },
+  memberName: { fontSize: 12, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
   notesOverlay: {
     position: "absolute",
     left: 16,
@@ -449,17 +440,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderLeftWidth: 3,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 10,
     gap: 10,
   },
   noteToastInner: { flex: 1 },
   noteFrom: {
-    fontSize: 11,
-    fontFamily: "PlayfairDisplay_600SemiBold",
-    letterSpacing: 0.6,
+    fontSize: 10,
+    fontFamily: "PlusJakartaSans_700Bold",
+    letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 3,
   },
-  noteText: { fontSize: 14, fontFamily: "PlayfairDisplay_400Regular", lineHeight: 20 },
+  noteText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", lineHeight: 19, letterSpacing: 0.1 },
   noteDismiss: { paddingTop: 2 },
 });
