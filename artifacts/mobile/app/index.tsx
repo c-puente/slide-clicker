@@ -34,7 +34,7 @@ export default function HomeScreen() {
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 600,
+      duration: 400,
       useNativeDriver: true,
     }).start();
   }, []);
@@ -50,11 +50,10 @@ export default function HomeScreen() {
   useEffect(() => {
     if (error) {
       Animated.sequence([
-        Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: -6, duration: 60, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 7, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -7, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 5, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: true }),
       ]).start();
     }
   }, [error]);
@@ -66,8 +65,8 @@ export default function HomeScreen() {
     Animated.spring(slideAnim, {
       toValue: tab === "audience" ? 1 : 0,
       useNativeDriver: false,
-      tension: 200,
-      friction: 20,
+      tension: 300,
+      friction: 28,
     }).start();
   };
 
@@ -82,18 +81,17 @@ export default function HomeScreen() {
     joinSession(joinCode.trim().toUpperCase());
   };
 
-  const bg = isDark ? "#0d0d14" : "#f2f2f7";
-  const card = isDark ? "#1a1a2e" : "#ffffff";
-  const textPrimary = isDark ? "#ffffff" : "#0a0a0a";
-  const textSecondary = isDark ? "#8888aa" : "#666680";
-  const accent = "#5b5cff";
-  const accentLight = isDark ? "rgba(91,92,255,0.18)" : "rgba(91,92,255,0.1)";
-  const border = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
-  const inputBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+  const bg = isDark ? "#0d0b08" : "#f4f1ec";
+  const textPrimary = isDark ? "#ede9e1" : "#1a1612";
+  const textSecondary = isDark ? "#6e6258" : "#7a7268";
+  const accent = "#c96a2f";
+  const inputBg = isDark ? "rgba(237,233,225,0.06)" : "#fefcf8";
+  const inputBorder = isDark ? "rgba(237,233,225,0.12)" : "rgba(26,22,18,0.14)";
+  const divider = isDark ? "rgba(237,233,225,0.08)" : "rgba(26,22,18,0.08)";
 
-  const tabIndicatorLeft = slideAnim.interpolate({
+  const underlineLeft = slideAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["2%", "52%"],
+    outputRange: ["0%", "50%"],
   });
 
   return (
@@ -106,84 +104,68 @@ export default function HomeScreen() {
           styles.container,
           {
             opacity: fadeAnim,
-            paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 20,
-            paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 20,
+            paddingTop: Platform.OS === "web" ? 60 + insets.top : insets.top + 32,
+            paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 24,
           },
         ]}
       >
         <View style={styles.header}>
-          <View style={[styles.iconBadge, { backgroundColor: accentLight }]}>
-            <Feather name="monitor" size={22} color={accent} />
-          </View>
-          <Text style={[styles.title, { color: textPrimary }]}>SlideClicker</Text>
-          <Text style={[styles.subtitle, { color: textSecondary }]}>
-            Control presentations together
+          <Text style={[styles.wordmark, { color: textPrimary }]}>SlideClicker</Text>
+          <Text style={[styles.tagline, { color: textSecondary }]}>
+            Silent audience control for live talks
           </Text>
         </View>
 
-        <Animated.View
-          style={[
-            styles.card,
-            {
-              backgroundColor: card,
-              borderColor: border,
-              transform: [{ translateX: shakeAnim }],
-            },
-          ]}
-        >
-          <View style={[styles.tabBar, { backgroundColor: inputBg }]}>
-            <Animated.View
-              style={[
-                styles.tabIndicator,
-                { backgroundColor: accent, left: tabIndicatorLeft },
-              ]}
-            />
-            <Pressable
-              style={styles.tab}
-              onPress={() => switchTab("presenter")}
-            >
+        <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+          <View style={[styles.tabRow, { borderBottomColor: divider }]}>
+            <Pressable style={styles.tab} onPress={() => switchTab("presenter")}>
               <Text
                 style={[
-                  styles.tabText,
+                  styles.tabLabel,
                   {
-                    color:
-                      activeTab === "presenter" ? "#ffffff" : textSecondary,
-                    fontWeight: activeTab === "presenter" ? "600" : "400",
+                    color: activeTab === "presenter" ? accent : textSecondary,
+                    fontFamily:
+                      activeTab === "presenter"
+                        ? "DM_Sans_600SemiBold"
+                        : "DM_Sans_400Regular",
                   },
                 ]}
               >
                 Present
               </Text>
             </Pressable>
-            <Pressable
-              style={styles.tab}
-              onPress={() => switchTab("audience")}
-            >
+            <Pressable style={styles.tab} onPress={() => switchTab("audience")}>
               <Text
                 style={[
-                  styles.tabText,
+                  styles.tabLabel,
                   {
-                    color:
-                      activeTab === "audience" ? "#ffffff" : textSecondary,
-                    fontWeight: activeTab === "audience" ? "600" : "400",
+                    color: activeTab === "audience" ? accent : textSecondary,
+                    fontFamily:
+                      activeTab === "audience"
+                        ? "DM_Sans_600SemiBold"
+                        : "DM_Sans_400Regular",
                   },
                 ]}
               >
-                Audience
+                Join as Audience
               </Text>
             </Pressable>
+            <Animated.View
+              style={[
+                styles.tabUnderline,
+                { backgroundColor: accent, left: underlineLeft },
+              ]}
+            />
           </View>
 
-          <View style={styles.cardBody}>
-            <Text style={[styles.fieldLabel, { color: textSecondary }]}>
-              Your name
-            </Text>
+          <View style={styles.formBody}>
+            <Text style={[styles.fieldLabel, { color: textSecondary }]}>Your name</Text>
             <TextInput
               style={[
                 styles.input,
                 {
                   backgroundColor: inputBg,
-                  borderColor: border,
+                  borderColor: inputBorder,
                   color: textPrimary,
                 },
               ]}
@@ -196,9 +178,7 @@ export default function HomeScreen() {
 
             {activeTab === "audience" && (
               <>
-                <Text
-                  style={[styles.fieldLabel, { color: textSecondary, marginTop: 12 }]}
-                >
+                <Text style={[styles.fieldLabel, { color: textSecondary, marginTop: 18 }]}>
                   Session code
                 </Text>
                 <TextInput
@@ -207,9 +187,8 @@ export default function HomeScreen() {
                     styles.codeInput,
                     {
                       backgroundColor: inputBg,
-                      borderColor: error ? "#ff4444" : border,
+                      borderColor: error ? "#c94040" : inputBorder,
                       color: accent,
-                      letterSpacing: 8,
                     },
                   ]}
                   placeholder="XXXX"
@@ -234,27 +213,22 @@ export default function HomeScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.primaryButton,
-                { backgroundColor: accent, opacity: pressed ? 0.85 : 1 },
+                { backgroundColor: accent, opacity: pressed ? 0.82 : 1 },
               ]}
               onPress={activeTab === "presenter" ? handlePresent : handleJoin}
             >
-              <Feather
-                name={activeTab === "presenter" ? "play" : "users"}
-                size={16}
-                color="#fff"
-                style={{ marginRight: 8 }}
-              />
               <Text style={styles.primaryButtonText}>
                 {activeTab === "presenter" ? "Start Session" : "Join Session"}
               </Text>
+              <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 6 }} />
             </Pressable>
           </View>
         </Animated.View>
 
         <Text style={[styles.hint, { color: textSecondary }]}>
           {activeTab === "presenter"
-            ? "Create a session and share the code with your audience"
-            : "Enter the 4-letter code shown on the presenter's screen"}
+            ? "Share the code with your audience once you start"
+            : "Ask the presenter for the 4-character code"}
         </Text>
       </Animated.View>
     </KeyboardAvoidingView>
@@ -265,114 +239,90 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     justifyContent: "center",
   },
   header: {
-    alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 40,
   },
-  iconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: -0.5,
+  wordmark: {
+    fontSize: 32,
+    fontFamily: "DM_Sans_700Bold",
+    letterSpacing: -0.8,
     marginBottom: 6,
   },
-  subtitle: {
+  tagline: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DM_Sans_400Regular",
+    lineHeight: 22,
   },
-  card: {
-    borderRadius: 20,
-    borderWidth: 1,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  tabBar: {
+  tabRow: {
     flexDirection: "row",
-    margin: 6,
-    borderRadius: 14,
-    padding: 2,
+    borderBottomWidth: 1,
+    marginBottom: 28,
     position: "relative",
-  },
-  tabIndicator: {
-    position: "absolute",
-    top: 2,
-    width: "46%",
-    height: "100%",
-    borderRadius: 11,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingBottom: 12,
     alignItems: "center",
   },
-  tabText: {
+  tabLabel: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
   },
-  cardBody: {
-    padding: 20,
-    paddingTop: 8,
+  tabUnderline: {
+    position: "absolute",
+    bottom: -1,
+    width: "50%",
+    height: 2,
+    borderRadius: 1,
   },
+  formBody: {},
   fieldLabel: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    fontFamily: "DM_Sans_500Medium",
+    letterSpacing: 0.4,
     marginBottom: 8,
+    textTransform: "uppercase",
   },
   input: {
     height: 50,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     fontSize: 16,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DM_Sans_400Regular",
   },
   codeInput: {
     textAlign: "center",
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    height: 58,
+    fontSize: 24,
+    fontFamily: "DM_Sans_700Bold",
+    letterSpacing: 10,
+    height: 60,
   },
   errorText: {
-    color: "#ff4444",
+    color: "#c94040",
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    marginTop: 8,
-    textAlign: "center",
+    fontFamily: "DM_Sans_400Regular",
+    marginTop: 10,
   },
   primaryButton: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    marginTop: 20,
+    marginTop: 24,
   },
   primaryButtonText: {
-    color: "#ffffff",
+    color: "#fefcf8",
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DM_Sans_600SemiBold",
   },
   hint: {
-    marginTop: 20,
+    marginTop: 28,
     fontSize: 13,
-    textAlign: "center",
-    fontFamily: "Inter_400Regular",
-    lineHeight: 18,
+    fontFamily: "DM_Sans_400Regular",
+    lineHeight: 19,
   },
 });

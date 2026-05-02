@@ -26,13 +26,13 @@ function NoteToast({
   onDismiss: () => void;
   isDark: boolean;
 }) {
-  const slideAnim = useRef(new Animated.Value(-100)).current;
+  const slideAnim = useRef(new Animated.Value(-80)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.spring(slideAnim, { toValue: 0, tension: 200, friction: 20, useNativeDriver: true }),
-      Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 260, friction: 24, useNativeDriver: true }),
+      Animated.timing(opacityAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
     ]).start();
 
     const timer = setTimeout(() => dismiss(), 8000);
@@ -41,8 +41,8 @@ function NoteToast({
 
   const dismiss = () => {
     Animated.parallel([
-      Animated.timing(slideAnim, { toValue: -100, duration: 250, useNativeDriver: true }),
-      Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: -80, duration: 220, useNativeDriver: true }),
+      Animated.timing(opacityAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
     ]).start(() => onDismiss());
   };
 
@@ -51,24 +51,21 @@ function NoteToast({
       style={[
         styles.noteToast,
         {
-          backgroundColor: isDark ? "#1e1e36" : "#ffffff",
-          borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+          backgroundColor: isDark ? "#1c1914" : "#fefcf8",
+          borderLeftColor: "#c96a2f",
           transform: [{ translateY: slideAnim }],
           opacity: opacityAnim,
         },
       ]}
     >
-      <View style={styles.noteToastLeft}>
-        <View style={[styles.noteAvatar, { backgroundColor: isDark ? "rgba(91,92,255,0.2)" : "rgba(91,92,255,0.12)" }]}>
-          <Feather name="message-circle" size={14} color="#5b5cff" />
-        </View>
-        <View style={styles.noteToastContent}>
-          <Text style={[styles.noteFrom, { color: isDark ? "#8888aa" : "#666680" }]}>{note.from}</Text>
-          <Text style={[styles.noteText, { color: isDark ? "#ffffff" : "#0a0a0a" }]} numberOfLines={3}>{note.text}</Text>
-        </View>
+      <View style={styles.noteToastInner}>
+        <Text style={[styles.noteFrom, { color: "#c96a2f" }]}>{note.from}</Text>
+        <Text style={[styles.noteText, { color: isDark ? "#ede9e1" : "#1a1612" }]} numberOfLines={3}>
+          {note.text}
+        </Text>
       </View>
-      <Pressable onPress={dismiss} hitSlop={12}>
-        <Feather name="x" size={16} color={isDark ? "#666688" : "#999aaa"} />
+      <Pressable onPress={dismiss} hitSlop={14} style={styles.noteDismiss}>
+        <Feather name="x" size={14} color={isDark ? "#6e6258" : "#9a9288"} />
       </Pressable>
     </Animated.View>
   );
@@ -95,14 +92,13 @@ export default function PresenterScreen() {
   const isDark = colorScheme === "dark";
 
   const flashAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeIn, {
       toValue: 1,
-      duration: 500,
+      duration: 400,
       useNativeDriver: true,
     }).start();
   }, []);
@@ -119,53 +115,19 @@ export default function PresenterScreen() {
       prevFlash.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Animated.sequence([
-        Animated.parallel([
-          Animated.timing(flashAnim, {
-            toValue: 1,
-            duration: 180,
-            useNativeDriver: false,
-          }),
-          Animated.spring(scaleAnim, {
-            toValue: 1.04,
-            tension: 300,
-            friction: 8,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(flashAnim, {
-            toValue: 0,
-            duration: 900,
-            useNativeDriver: false,
-          }),
-          Animated.spring(scaleAnim, {
-            toValue: 1,
-            tension: 300,
-            friction: 8,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start(() => {
-        prevFlash.current = false;
-      });
+        Animated.timing(flashAnim, { toValue: 1, duration: 160, useNativeDriver: false }),
+        Animated.timing(flashAnim, { toValue: 0, duration: 1000, useNativeDriver: false }),
+      ]).start(() => { prevFlash.current = false; });
     }
   }, [triggerFlash]);
 
   useEffect(() => {
     const ratio = totalAudience > 0 ? voteCount / totalAudience : 0;
-    if (ratio >= 0.5) {
+    if (ratio >= 0.5 && totalAudience > 0) {
       const pulse = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.06,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
+          Animated.timing(pulseAnim, { toValue: 1.04, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
         ]),
       );
       pulse.start();
@@ -185,24 +147,22 @@ export default function PresenterScreen() {
     router.replace("/");
   };
 
-  const bg = isDark ? "#0d0d14" : "#f2f2f7";
-  const card = isDark ? "#1a1a2e" : "#ffffff";
-  const textPrimary = isDark ? "#ffffff" : "#0a0a0a";
-  const textSecondary = isDark ? "#8888aa" : "#666680";
-  const accent = "#5b5cff";
-  const border = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
-  const flashBg = isDark ? "#2a1a4e" : "#eeeeff";
+  const bg = isDark ? "#0d0b08" : "#f4f1ec";
+  const textPrimary = isDark ? "#ede9e1" : "#1a1612";
+  const textSecondary = isDark ? "#6e6258" : "#7a7268";
+  const accent = "#c96a2f";
+  const surface = isDark ? "#1c1914" : "#fefcf8";
+  const divider = isDark ? "rgba(237,233,225,0.08)" : "rgba(26,22,18,0.08)";
 
   const ratio = totalAudience > 0 ? voteCount / totalAudience : 0;
   const hasVotes = voteCount > 0;
   const majorityReached = ratio >= 0.5 && totalAudience > 0;
-
-  const flashBackground = flashAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [card, isDark ? "#2d1080" : "#c8c6ff"],
-  });
-
   const audienceMembers = presence.filter((p) => p.role === "audience");
+
+  const flashBorderColor = flashAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [isDark ? "rgba(237,233,225,0.08)" : "rgba(26,22,18,0.08)", accent],
+  });
 
   return (
     <Animated.View style={[styles.flex, { backgroundColor: bg, opacity: fadeIn }]}>
@@ -210,13 +170,13 @@ export default function PresenterScreen() {
         <View
           style={[
             styles.notesOverlay,
-            { top: Platform.OS === "web" ? 67 + insets.top : insets.top + 60 },
+            { top: Platform.OS === "web" ? 60 + insets.top : insets.top + 56 },
           ]}
           pointerEvents="box-none"
         >
           <ScrollView
             style={styles.notesScroll}
-            contentContainerStyle={styles.notesScrollContent}
+            contentContainerStyle={{ gap: 6 }}
             showsVerticalScrollIndicator={false}
             pointerEvents="box-none"
           >
@@ -231,128 +191,82 @@ export default function PresenterScreen() {
           </ScrollView>
         </View>
       )}
+
       <View
         style={[
           styles.container,
           {
-            paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16,
-            paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16,
+            paddingTop: Platform.OS === "web" ? 60 + insets.top : insets.top + 16,
+            paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 16,
           },
         ]}
       >
-        <View style={styles.topRow}>
+        <View style={styles.topBar}>
           <Pressable
             onPress={handleLeave}
-            style={({ pressed }) => [
-              styles.backBtn,
-              {
-                backgroundColor: isDark
-                  ? "rgba(255,255,255,0.08)"
-                  : "rgba(0,0,0,0.05)",
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
+            style={({ pressed }) => [styles.leaveBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
-            <Feather name="x" size={18} color={textSecondary} />
+            <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
           </Pressable>
 
-          <View
-            style={[
-              styles.codeBadge,
-              { backgroundColor: isDark ? "rgba(91,92,255,0.2)" : "rgba(91,92,255,0.1)" },
-            ]}
-          >
-            <Text style={[styles.codeLabel, { color: textSecondary }]}>CODE</Text>
+          <View style={[styles.codePill, { backgroundColor: isDark ? "rgba(201,106,47,0.12)" : "rgba(201,106,47,0.1)" }]}>
             <Text style={[styles.codeValue, { color: accent }]}>{code}</Text>
           </View>
 
           <View style={styles.audienceCount}>
-            <Feather name="users" size={14} color={textSecondary} />
+            <Feather name="users" size={13} color={textSecondary} />
             <Text style={[styles.audienceCountText, { color: textSecondary }]}>
               {audienceMembers.length}
             </Text>
           </View>
         </View>
 
-        <View style={styles.slideRow}>
-          <Text style={[styles.slideLabel, { color: textSecondary }]}>SLIDE</Text>
-          <Text style={[styles.slideNumber, { color: textPrimary }]}>
-            {slideNumber}
-          </Text>
+        <View style={styles.slideHero}>
+          <Text style={[styles.slideLabel, { color: textSecondary }]}>slide</Text>
+          <Text style={[styles.slideNumber, { color: textPrimary }]}>{slideNumber}</Text>
         </View>
 
         <Animated.View
           style={[
-            styles.flashCard,
+            styles.statusCard,
             {
-              backgroundColor: flashBackground,
-              borderColor: majorityReached ? accent : border,
-              borderWidth: majorityReached ? 2 : 1,
-              transform: [{ scale: Animated.multiply(scaleAnim, pulseAnim) }],
+              backgroundColor: surface,
+              borderColor: flashBorderColor,
+              transform: [{ scale: pulseAnim }],
             },
           ]}
         >
           {hasVotes ? (
-            <>
-              <View
-                style={[
-                  styles.flashIconCircle,
-                  {
-                    backgroundColor: majorityReached
-                      ? accent
-                      : isDark
-                      ? "rgba(91,92,255,0.2)"
-                      : "rgba(91,92,255,0.1)",
-                  },
-                ]}
-              >
-                <Feather
-                  name="arrow-right"
-                  size={32}
-                  color={majorityReached ? "#fff" : accent}
-                />
+            <View style={styles.statusCardInner}>
+              <View style={[styles.statusDot, { backgroundColor: majorityReached ? accent : isDark ? "#3a3530" : "#e8e3db" }]} />
+              <View style={styles.statusTextBlock}>
+                <Text style={[styles.statusTitle, { color: textPrimary }]}>
+                  {majorityReached ? "Majority wants to advance" : "Requests to advance"}
+                </Text>
+                <Text style={[styles.statusSub, { color: textSecondary }]}>
+                  {voteCount} of {totalAudience} {totalAudience === 1 ? "person" : "people"}
+                </Text>
               </View>
-              <Text style={[styles.flashTitle, { color: textPrimary }]}>
-                {majorityReached ? "Majority ready" : "Requests to advance"}
-              </Text>
-              <Text style={[styles.flashSubtitle, { color: textSecondary }]}>
-                {voteCount} of {totalAudience} audience member
-                {totalAudience !== 1 ? "s" : ""}
-              </Text>
-            </>
+            </View>
           ) : (
-            <>
-              <View
-                style={[
-                  styles.flashIconCircle,
-                  {
-                    backgroundColor: isDark
-                      ? "rgba(255,255,255,0.05)"
-                      : "rgba(0,0,0,0.04)",
-                  },
-                ]}
-              >
-                <Feather name="wifi" size={28} color={textSecondary} />
-              </View>
-              <Text style={[styles.flashTitle, { color: textSecondary }]}>
-                Waiting for audience
-              </Text>
-              <Text style={[styles.flashSubtitle, { color: textSecondary }]}>
+            <View style={styles.statusCardInner}>
+              <View style={[styles.statusDot, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]} />
+              <Text style={[styles.statusTitle, { color: textSecondary }]}>
                 {audienceMembers.length === 0
-                  ? "Share the code to get started"
-                  : `${audienceMembers.length} member${audienceMembers.length !== 1 ? "s" : ""} connected`}
+                  ? "Waiting for audience to join"
+                  : `${audienceMembers.length} ${audienceMembers.length === 1 ? "person" : "people"} connected`}
               </Text>
-            </>
+            </View>
           )}
         </Animated.View>
 
         {totalAudience > 0 && (
-          <View style={[styles.progressBar, { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }]}>
-            <Animated.View
+          <View style={[styles.progressTrack, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]}>
+            <View
               style={[
                 styles.progressFill,
                 {
-                  backgroundColor: majorityReached ? accent : isDark ? "#4444aa" : "#9898ee",
+                  backgroundColor: majorityReached ? accent : isDark ? "#5a4a3a" : "#c4a882",
                   width: `${Math.min(ratio * 100, 100)}%`,
                 },
               ]}
@@ -368,66 +282,42 @@ export default function PresenterScreen() {
                 resetVotes();
               }}
               style={({ pressed }) => [
-                styles.secondaryButton,
+                styles.resetBtn,
                 {
-                  borderColor: border,
-                  backgroundColor: isDark
-                    ? "rgba(255,255,255,0.05)"
-                    : "rgba(0,0,0,0.03)",
-                  opacity: pressed ? 0.7 : 1,
+                  borderColor: divider,
+                  backgroundColor: isDark ? "rgba(237,233,225,0.04)" : "rgba(26,22,18,0.04)",
+                  opacity: pressed ? 0.6 : 1,
                 },
               ]}
             >
-              <Feather name="refresh-cw" size={16} color={textSecondary} />
+              <Feather name="refresh-cw" size={15} color={textSecondary} />
             </Pressable>
           )}
           <Pressable
             onPress={handleAdvance}
             style={({ pressed }) => [
-              styles.nextButton,
+              styles.nextBtn,
               {
                 backgroundColor: accent,
                 flex: hasVotes ? 1 : undefined,
                 width: hasVotes ? undefined : "100%",
-                opacity: pressed ? 0.88 : 1,
+                opacity: pressed ? 0.84 : 1,
               },
             ]}
           >
-            <Text style={styles.nextButtonText}>Next Slide</Text>
-            <Feather name="arrow-right" size={18} color="#fff" style={{ marginLeft: 8 }} />
+            <Text style={styles.nextBtnText}>Next Slide</Text>
+            <Feather name="arrow-right" size={17} color="#fefcf8" style={{ marginLeft: 6 }} />
           </Pressable>
         </View>
 
         {audienceMembers.length > 0 && (
-          <View style={[styles.membersList, { borderColor: border }]}>
-            <Text style={[styles.membersTitle, { color: textSecondary }]}>
-              AUDIENCE
-            </Text>
-            <View style={styles.memberChips}>
-              {audienceMembers.map((m, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.memberChip,
-                    {
-                      backgroundColor: isDark
-                        ? "rgba(255,255,255,0.07)"
-                        : "rgba(0,0,0,0.05)",
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.memberDot,
-                      { backgroundColor: "#22cc88" },
-                    ]}
-                  />
-                  <Text style={[styles.memberName, { color: textPrimary }]}>
-                    {m.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
+          <View style={[styles.memberRow, { borderTopColor: divider }]}>
+            {audienceMembers.map((m, i) => (
+              <View key={i} style={[styles.memberChip, { backgroundColor: isDark ? "#2a2520" : "#eee9e1" }]}>
+                <View style={[styles.memberDot, { backgroundColor: "#3d8a6e" }]} />
+                <Text style={[styles.memberName, { color: textPrimary }]}>{m.name}</Text>
+              </View>
+            ))}
           </View>
         )}
       </View>
@@ -439,104 +329,93 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
-  topRow: {
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 28,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+  leaveBtn: {
+    paddingVertical: 6,
+    paddingRight: 8,
   },
-  codeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    gap: 8,
+  leaveBtnText: {
+    fontSize: 14,
+    fontFamily: "DM_Sans_400Regular",
   },
-  codeLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 1,
+  codePill: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 8,
   },
   codeValue: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
+    fontSize: 17,
+    fontFamily: "DM_Sans_700Bold",
     letterSpacing: 4,
   },
   audienceCount: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    width: 36,
+    minWidth: 36,
     justifyContent: "flex-end",
   },
   audienceCountText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    fontFamily: "DM_Sans_500Medium",
   },
-  slideRow: {
-    alignItems: "center",
-    marginBottom: 24,
+  slideHero: {
+    marginBottom: 28,
   },
   slideLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 2,
-    marginBottom: 4,
+    fontSize: 12,
+    fontFamily: "DM_Sans_400Regular",
+    letterSpacing: 1.5,
+    textTransform: "lowercase",
+    marginBottom: 2,
   },
   slideNumber: {
-    fontSize: 64,
-    fontFamily: "Inter_700Bold",
-    lineHeight: 72,
-    letterSpacing: -2,
+    fontSize: 80,
+    fontFamily: "DM_Sans_700Bold",
+    lineHeight: 84,
+    letterSpacing: -3,
   },
-  flashCard: {
-    borderRadius: 24,
+  statusCard: {
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 32,
+    padding: 18,
+    marginBottom: 14,
+  },
+  statusCardInner: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    minHeight: 180,
-    marginBottom: 16,
-    shadowColor: "#5b5cff",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
+    gap: 14,
   },
-  flashIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    flexShrink: 0,
   },
-  flashTitle: {
-    fontSize: 20,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: 6,
-    textAlign: "center",
+  statusTextBlock: {
+    flex: 1,
   },
-  flashSubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
+  statusTitle: {
+    fontSize: 15,
+    fontFamily: "DM_Sans_500Medium",
   },
-  progressBar: {
-    height: 4,
+  statusSub: {
+    fontSize: 13,
+    fontFamily: "DM_Sans_400Regular",
+    marginTop: 2,
+  },
+  progressTrack: {
+    height: 3,
     borderRadius: 2,
     overflow: "hidden",
-    marginBottom: 20,
+    marginBottom: 22,
   },
   progressFill: {
     height: "100%",
@@ -547,38 +426,30 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 24,
   },
-  secondaryButton: {
-    height: 54,
-    width: 54,
-    borderRadius: 14,
+  resetBtn: {
+    height: 52,
+    width: 52,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
   },
-  nextButton: {
-    height: 54,
-    borderRadius: 14,
+  nextBtn: {
+    height: 52,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     paddingHorizontal: 24,
   },
-  nextButtonText: {
-    color: "#ffffff",
-    fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
+  nextBtnText: {
+    color: "#fefcf8",
+    fontSize: 16,
+    fontFamily: "DM_Sans_600SemiBold",
   },
-  membersList: {
+  memberRow: {
     borderTopWidth: 1,
     paddingTop: 16,
-  },
-  membersTitle: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 1.2,
-    marginBottom: 10,
-  },
-  memberChips: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
@@ -586,75 +457,49 @@ const styles = StyleSheet.create({
   memberChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
     gap: 6,
   },
   memberDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   memberName: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "DM_Sans_400Regular",
   },
   notesOverlay: {
     position: "absolute",
-    left: 12,
-    right: 12,
+    left: 16,
+    right: 16,
     zIndex: 99,
-    maxHeight: 280,
+    maxHeight: 260,
   },
-  notesScroll: {
-    flex: 1,
-  },
-  notesScrollContent: {
-    gap: 8,
-  },
+  notesScroll: { flex: 1 },
   noteToast: {
     flexDirection: "row",
     alignItems: "flex-start",
-    justifyContent: "space-between",
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  noteToastLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  noteAvatar: {
-    width: 30,
-    height: 30,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
+    borderLeftWidth: 3,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 10,
   },
-  noteToastContent: {
-    flex: 1,
-  },
+  noteToastInner: { flex: 1 },
   noteFrom: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.3,
-    marginBottom: 3,
+    fontFamily: "DM_Sans_600SemiBold",
+    letterSpacing: 0.4,
     textTransform: "uppercase",
+    marginBottom: 3,
   },
   noteText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DM_Sans_400Regular",
     lineHeight: 20,
   },
+  noteDismiss: { paddingTop: 2 },
 });
