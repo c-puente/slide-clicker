@@ -24,10 +24,13 @@ export default function AudienceScreen() {
     code,
     slideNumber,
     voteCount,
+    prevVoteCount,
     totalAudience,
     presence,
     voteNext,
     unvoteNext,
+    votePrev,
+    unvotePrev,
     leaveSession,
     sendNote,
     notesDisabled,
@@ -39,6 +42,7 @@ export default function AudienceScreen() {
   const isDark = colorScheme === "dark";
 
   const [hasVoted, setHasVoted] = useState(false);
+  const [hasPrevVoted, setHasPrevVoted] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [briefSent, setBriefSent] = useState(false);
@@ -47,7 +51,9 @@ export default function AudienceScreen() {
   const notesSentRef = useRef(0);
   const noteAnim = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(1)).current;
+  const prevPressAnim = useRef(new Animated.Value(1)).current;
   const checkAnim = useRef(new Animated.Value(0)).current;
+  const prevCheckAnim = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -60,7 +66,9 @@ export default function AudienceScreen() {
 
   useEffect(() => {
     setHasVoted(false);
+    setHasPrevVoted(false);
     Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
+    Animated.timing(prevCheckAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
   }, [slideNumber]);
 
   // Close note bar if presenter disables notes while it's open
@@ -114,6 +122,24 @@ export default function AudienceScreen() {
         setNoteCooldown(true);
         setTimeout(() => setNoteCooldown(false), 2000);
       }, 700);
+    }
+  };
+
+  const handlePrevVote = () => {
+    if (hasPrevVoted) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setHasPrevVoted(false);
+      unvotePrev();
+      Animated.timing(prevCheckAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setHasPrevVoted(true);
+      votePrev();
+      Animated.sequence([
+        Animated.timing(prevPressAnim, { toValue: 0.97, duration: 80, useNativeDriver: false }),
+        Animated.timing(prevPressAnim, { toValue: 1, duration: 180, useNativeDriver: false }),
+      ]).start();
+      Animated.timing(prevCheckAnim, { toValue: 1, duration: 220, useNativeDriver: false }).start();
     }
   };
 
@@ -239,6 +265,44 @@ export default function AudienceScreen() {
                 ]}
               >
                 {hasVoted ? "Tap again to cancel" : "Tap to signal the presenter"}
+              </Text>
+            </Pressable>
+          </Animated.View>
+
+          {/* ── Prev vote button ── */}
+          <Animated.View style={{ transform: [{ scale: prevPressAnim }], marginBottom: 16 }}>
+            <Pressable
+              onPress={handlePrevVote}
+              style={[
+                styles.prevVoteButton,
+                {
+                  backgroundColor: hasPrevVoted
+                    ? isDark ? "#1c1914" : "#f0ece4"
+                    : isDark ? "#1c1914" : "#fefcf8",
+                  borderColor: hasPrevVoted ? accent : isDark ? "rgba(237,233,225,0.12)" : "rgba(26,22,18,0.14)",
+                },
+              ]}
+            >
+              <View style={styles.prevVoteIconContainer}>
+                <Animated.View
+                  style={[
+                    styles.prevVoteIconLayer,
+                    {
+                      opacity: prevCheckAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 0],
+                      }),
+                    },
+                  ]}
+                >
+                  <Feather name="arrow-left" size={15} color={hasPrevVoted ? accent : textSecondary} />
+                </Animated.View>
+                <Animated.View style={[styles.prevVoteIconLayer, { opacity: prevCheckAnim }]}>
+                  <Feather name="check" size={15} color={accent} />
+                </Animated.View>
+              </View>
+              <Text style={[styles.prevVoteButtonText, { color: hasPrevVoted ? accent : textSecondary }]}>
+                {hasPrevVoted ? "Requested" : "Previous Slide, Please"}
               </Text>
             </Pressable>
           </Animated.View>
@@ -429,6 +493,16 @@ const styles = StyleSheet.create({
   voteButtonSub: {
     fontSize: 12, fontFamily: "PlusJakartaSans_400Regular",
     textAlign: "center", letterSpacing: 0.1,
+  },
+  prevVoteButton: {
+    borderRadius: 12, borderWidth: 1.5,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    paddingVertical: 13, paddingHorizontal: 20, gap: 8,
+  },
+  prevVoteIconContainer: { width: 15, height: 15 },
+  prevVoteIconLayer: { position: "absolute", top: 0, left: 0 },
+  prevVoteButtonText: {
+    fontSize: 14, fontFamily: "PlusJakartaSans_600SemiBold", letterSpacing: 0.1,
   },
   voteStatus: { marginBottom: 16, gap: 7 },
   progressTrack: { height: 3, borderRadius: 2, overflow: "hidden" },

@@ -28,6 +28,7 @@ interface SessionState {
   name: string;
   slideNumber: number;
   voteCount: number;
+  prevVoteCount: number;
   totalAudience: number;
   presence: PresenceMember[];
   connected: boolean;
@@ -44,7 +45,10 @@ interface SessionActions {
   joinSession: (code: string) => void;
   voteNext: () => void;
   unvoteNext: () => void;
+  votePrev: () => void;
+  unvotePrev: () => void;
   advanceSlide: () => void;
+  previousSlide: () => void;
   resetVotes: () => void;
   leaveSession: () => void;
   clearError: () => void;
@@ -61,6 +65,7 @@ const defaultState: SessionState = {
   name: "",
   slideNumber: 1,
   voteCount: 0,
+  prevVoteCount: 0,
   totalAudience: 0,
   presence: [],
   connected: false,
@@ -78,7 +83,10 @@ const SessionContext = createContext<SessionState & SessionActions>({
   joinSession: () => {},
   voteNext: () => {},
   unvoteNext: () => {},
+  votePrev: () => {},
+  unvotePrev: () => {},
   advanceSlide: () => {},
+  previousSlide: () => {},
   resetVotes: () => {},
   leaveSession: () => {},
   clearError: () => {},
@@ -186,11 +194,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
               triggerFlash: shouldFlash ? true : s.triggerFlash,
             };
           });
+        } else if (type === "prev_vote_update") {
+          setState((s) => ({
+            ...s,
+            prevVoteCount: (msg["prevVoteCount"] as number) ?? 0,
+            totalAudience: (msg["totalAudience"] as number) ?? s.totalAudience,
+          }));
         } else if (type === "slide_advanced") {
           setState((s) => ({
             ...s,
             slideNumber: (msg["slideNumber"] as number) ?? s.slideNumber + 1,
             voteCount: 0,
+            prevVoteCount: 0,
+            totalAudience: (msg["totalAudience"] as number) ?? s.totalAudience,
+            triggerFlash: false,
+          }));
+        } else if (type === "slide_went_back") {
+          setState((s) => ({
+            ...s,
+            slideNumber: (msg["slideNumber"] as number) ?? Math.max(1, s.slideNumber - 1),
+            voteCount: 0,
+            prevVoteCount: 0,
             totalAudience: (msg["totalAudience"] as number) ?? s.totalAudience,
             triggerFlash: false,
           }));
@@ -260,7 +284,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const voteNext = useCallback(() => send({ type: "vote_next" }), [send]);
   const unvoteNext = useCallback(() => send({ type: "unvote_next" }), [send]);
+  const votePrev = useCallback(() => send({ type: "vote_prev" }), [send]);
+  const unvotePrev = useCallback(() => send({ type: "unvote_prev" }), [send]);
   const advanceSlide = useCallback(() => send({ type: "advance_slide" }), [send]);
+  const previousSlide = useCallback(() => send({ type: "go_back" }), [send]);
   const resetVotes = useCallback(() => send({ type: "reset_votes" }), [send]);
 
   const leaveSession = useCallback(() => {
@@ -302,7 +329,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         joinSession,
         voteNext,
         unvoteNext,
+        votePrev,
+        unvotePrev,
         advanceSlide,
+        previousSlide,
         resetVotes,
         leaveSession,
         clearError,

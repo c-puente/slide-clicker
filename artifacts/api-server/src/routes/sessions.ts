@@ -31,6 +31,8 @@ interface Session {
   slideNumber: number;
   voteCount: number;
   voterIds: Set<string>;
+  prevVoteCount: number;
+  prevVoterIds: Set<string>;
   locked: boolean;
   notesDisabled: boolean;
 }
@@ -161,6 +163,8 @@ export function attachWebSocketServer(server: import("http").Server) {
           slideNumber: 1,
           voteCount: 0,
           voterIds: new Set(),
+          prevVoteCount: 0,
+          prevVoterIds: new Set(),
           locked: false,
           notesDisabled: false,
         };
@@ -259,6 +263,46 @@ export function attachWebSocketServer(server: import("http").Server) {
         });
         logger.info({ sessionCode, voteCount: session.voteCount }, "Vote cancelled");
 
+      // ── vote_prev ──────────────────────────────────────────────────────────
+      } else if (type === "vote_prev") {
+        if (!sessionCode || !clientId) return;
+        const session = sessions.get(sessionCode);
+        if (!session) return;
+
+        const voter = session.clients.get(clientId);
+        if (!voter || voter.role !== "audience") return;
+
+        if (session.prevVoterIds.has(clientId)) return;
+        session.prevVoterIds.add(clientId);
+        session.prevVoteCount = session.prevVoterIds.size;
+
+        broadcastAll(session, {
+          type: "prev_vote_update",
+          prevVoteCount: session.prevVoteCount,
+          totalAudience: audienceCount(session),
+        });
+        logger.info({ sessionCode, prevVoteCount: session.prevVoteCount }, "Prev vote cast");
+
+      // ── unvote_prev ────────────────────────────────────────────────────────
+      } else if (type === "unvote_prev") {
+        if (!sessionCode || !clientId) return;
+        const session = sessions.get(sessionCode);
+        if (!session) return;
+
+        const voter = session.clients.get(clientId);
+        if (!voter || voter.role !== "audience") return;
+
+        if (!session.prevVoterIds.has(clientId)) return;
+        session.prevVoterIds.delete(clientId);
+        session.prevVoteCount = session.prevVoterIds.size;
+
+        broadcastAll(session, {
+          type: "prev_vote_update",
+          prevVoteCount: session.prevVoteCount,
+          totalAudience: audienceCount(session),
+        });
+        logger.info({ sessionCode, prevVoteCount: session.prevVoteCount }, "Prev vote cancelled");
+
       // ── advance_slide ──────────────────────────────────────────────────────
       } else if (type === "advance_slide") {
         if (!sessionCode || !clientId) return;
@@ -271,14 +315,41 @@ export function attachWebSocketServer(server: import("http").Server) {
         session.slideNumber += 1;
         session.voteCount = 0;
         session.voterIds.clear();
+        session.prevVoteCount = 0;
+        session.prevVoterIds.clear();
 
         broadcastAll(session, {
           type: "slide_advanced",
           slideNumber: session.slideNumber,
           voteCount: 0,
+          prevVoteCount: 0,
           totalAudience: audienceCount(session),
         });
         logger.info({ sessionCode, slideNumber: session.slideNumber }, "Slide advanced");
+
+      // ── go_back ────────────────────────────────────────────────────────────
+      } else if (type === "go_back") {
+        if (!sessionCode || !clientId) return;
+        const session = sessions.get(sessionCode);
+        if (!session) return;
+
+        const sender = session.clients.get(clientId);
+        if (!sender || sender.role !== "presenter") return;
+
+        session.slideNumber = Math.max(1, session.slideNumber - 1);
+        session.voteCount = 0;
+        session.voterIds.clear();
+        session.prevVoteCount = 0;
+        session.prevVoterIds.clear();
+
+        broadcastAll(session, {
+          type: "slide_went_back",
+          slideNumber: session.slideNumber,
+          voteCount: 0,
+          prevVoteCount: 0,
+          totalAudience: audienceCount(session),
+        });
+        logger.info({ sessionCode, slideNumber: session.slideNumber }, "Slide went back");
 
       // ── reset_votes ────────────────────────────────────────────────────────
       } else if (type === "reset_votes") {
@@ -291,12 +362,12 @@ export function attachWebSocketServer(server: import("http").Server) {
 
         session.voteCount = 0;
         session.voterIds.clear();
+        session.prevVoteCount = 0;
+        session.prevVoterIds.clear();
 
-        broadcastAll(session, {
-          type: "vote_update",
-          voteCount: 0,
-          totalAudience: audienceCount(session),
-        });
+        const total = audienceCount(session);
+        broadcastAll(session, { type: "vote_update", voteCount: 0, totalAudience: total });
+        broadcastAll(session, { type: "prev_vote_update", prevVoteCount: 0, totalAudience: total });
 
       // ── set_room_locked ────────────────────────────────────────────────────
       } else if (type === "set_room_locked") {
@@ -364,9 +435,12 @@ export function attachWebSocketServer(server: import("http").Server) {
 
         // Clean up
         const hadVoted = session.voterIds.has(targetClientId);
+        const hadPrevVoted = session.prevVoterIds.has(targetClientId);
         session.clients.delete(targetClientId);
         session.voterIds.delete(targetClientId);
         session.voteCount = session.voterIds.size;
+        session.prevVoterIds.delete(targetClientId);
+        session.prevVoteCount = session.prevVoterIds.size;
 
         // Close their connection
         try { targetClient.ws.close(1000, "Removed by presenter"); } catch {}
@@ -375,6 +449,9 @@ export function attachWebSocketServer(server: import("http").Server) {
         broadcast(session, { type: "presence_update", presence: buildPresenceList(session) });
         if (hadVoted) {
           broadcastAll(session, { type: "vote_update", voteCount: session.voteCount, totalAudience: total });
+        }
+        if (hadPrevVoted) {
+          broadcastAll(session, { type: "prev_vote_update", prevVoteCount: session.prevVoteCount, totalAudience: total });
         }
 
         logger.info({ sessionCode, removed: targetClient.name }, "Member removed");
@@ -424,9 +501,12 @@ export function attachWebSocketServer(server: import("http").Server) {
       if (!session) return;
 
       const hadVoted = session.voterIds.has(clientId);
+      const hadPrevVoted = session.prevVoterIds.has(clientId);
       session.clients.delete(clientId);
       session.voterIds.delete(clientId);
       session.voteCount = session.voterIds.size;
+      session.prevVoterIds.delete(clientId);
+      session.prevVoteCount = session.prevVoterIds.size;
 
       if (session.clients.size === 0) {
         sessions.delete(sessionCode);
@@ -436,6 +516,9 @@ export function attachWebSocketServer(server: import("http").Server) {
         broadcast(session, { type: "presence_update", presence: buildPresenceList(session) });
         if (hadVoted) {
           broadcastAll(session, { type: "vote_update", voteCount: session.voteCount, totalAudience: total });
+        }
+        if (hadPrevVoted) {
+          broadcastAll(session, { type: "prev_vote_update", prevVoteCount: session.prevVoteCount, totalAudience: total });
         }
       }
     });

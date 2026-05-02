@@ -235,10 +235,12 @@ export default function PresenterScreen() {
     code,
     slideNumber,
     voteCount,
+    prevVoteCount,
     totalAudience,
     presence,
     triggerFlash,
     advanceSlide,
+    previousSlide,
     resetVotes,
     leaveSession,
     notes,
@@ -470,23 +472,47 @@ export default function PresenterScreen() {
         </Animated.View>
 
         {totalAudience > 0 && (
-          <View
-            style={[styles.progressTrack, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]}
-          >
+          <>
             <View
-              style={[
-                styles.progressFill,
-                {
-                  backgroundColor: majorityReached ? accent : isDark ? "#5a4a3a" : "#c4a882",
-                  width: `${Math.min(ratio * 100, 100)}%`,
-                },
-              ]}
-            />
-          </View>
+              style={[styles.progressTrack, { backgroundColor: isDark ? "#3a3530" : "#e8e3db" }]}
+            >
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    backgroundColor: majorityReached ? accent : isDark ? "#5a4a3a" : "#c4a882",
+                    width: `${Math.min(ratio * 100, 100)}%`,
+                  },
+                ]}
+              />
+            </View>
+            {prevVoteCount > 0 && (
+              <Text style={[styles.prevVoteHint, { color: textSecondary }]}>
+                ← {prevVoteCount} {prevVoteCount === 1 ? "person wants" : "people want"} to go back
+              </Text>
+            )}
+          </>
         )}
 
         {/* ── Action row ── */}
         <View style={styles.actionRow}>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              previousSlide();
+            }}
+            style={({ pressed }) => [
+              styles.prevBtn,
+              {
+                borderColor: divider,
+                backgroundColor: isDark ? "rgba(237,233,225,0.04)" : "rgba(26,22,18,0.04)",
+                opacity: pressed ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Feather name="arrow-left" size={15} color={textSecondary} style={{ marginRight: 5 }} />
+            <Text style={[styles.prevBtnText, { color: textSecondary }]}>Prev</Text>
+          </Pressable>
           {hasVotes && (
             <Pressable
               onPress={() => {
@@ -512,12 +538,7 @@ export default function PresenterScreen() {
             }}
             style={({ pressed }) => [
               styles.nextBtn,
-              {
-                backgroundColor: accent,
-                flex: hasVotes ? 1 : undefined,
-                width: hasVotes ? undefined : "100%",
-                opacity: pressed ? 0.84 : 1,
-              },
+              { backgroundColor: accent, flex: 1, opacity: pressed ? 0.84 : 1 },
             ]}
           >
             <Text style={styles.nextBtnText}>Next Slide</Text>
@@ -607,6 +628,18 @@ const styles = StyleSheet.create({
   progressTrack: { height: 3, borderRadius: 2, overflow: "hidden", marginBottom: 20 },
   progressFill: { height: "100%", borderRadius: 2 },
   actionRow: { flexDirection: "row", gap: 10, marginBottom: 22 },
+  prevBtn: {
+    height: 50, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+    flexDirection: "row", paddingHorizontal: 14, borderWidth: 1,
+  },
+  prevBtnText: {
+    fontSize: 14, fontFamily: "PlusJakartaSans_500Medium", letterSpacing: 0.1,
+  },
+  prevVoteHint: {
+    fontSize: 11, fontFamily: "PlusJakartaSans_400Regular",
+    letterSpacing: 0.1, marginTop: 6, marginBottom: 2,
+  },
   resetBtn: {
     height: 50, width: 50, borderRadius: 10,
     alignItems: "center", justifyContent: "center", borderWidth: 1,
