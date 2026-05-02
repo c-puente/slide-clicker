@@ -50,7 +50,7 @@ export default function AudienceScreen() {
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: false }).start();
   }, []);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function AudienceScreen() {
 
   useEffect(() => {
     setHasVoted(false);
-    Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+    Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
   }, [slideNumber]);
 
   const closeNoteBar = () => {
@@ -114,16 +114,16 @@ export default function AudienceScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setHasVoted(false);
       unvoteNext();
-      Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+      Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       setHasVoted(true);
       voteNext();
       Animated.sequence([
-        Animated.timing(pressAnim, { toValue: 0.96, duration: 80, useNativeDriver: true }),
-        Animated.timing(pressAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(pressAnim, { toValue: 0.96, duration: 80, useNativeDriver: false }),
+        Animated.timing(pressAnim, { toValue: 1, duration: 180, useNativeDriver: false }),
       ]).start();
-      Animated.timing(checkAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+      Animated.timing(checkAnim, { toValue: 1, duration: 220, useNativeDriver: false }).start();
     }
   };
 
@@ -200,26 +200,26 @@ export default function AudienceScreen() {
               },
             ]}
           >
-            <Animated.View
-              style={[
-                styles.voteIconRow,
-                {
-                  opacity: checkAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [1, 0],
-                  }),
-                },
-              ]}
-            >
-              <Feather name="arrow-right" size={20} color="#fefcf8" />
-            </Animated.View>
-            <Animated.View
-              style={[styles.voteIconRow, styles.voteIconAbsolute, { opacity: checkAnim }]}
-            >
-              <Feather name="check" size={20} color={accent} />
-            </Animated.View>
+            <View style={styles.voteIconContainer}>
+              <Animated.View
+                style={[
+                  styles.voteIconLayer,
+                  {
+                    opacity: checkAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 0],
+                    }),
+                  },
+                ]}
+              >
+                <Feather name="arrow-right" size={20} color="#fefcf8" />
+              </Animated.View>
+              <Animated.View style={[styles.voteIconLayer, { opacity: checkAnim }]}>
+                <Feather name="check" size={20} color={accent} />
+              </Animated.View>
+            </View>
             <Text style={[styles.voteButtonText, { color: hasVoted ? accent : "#fefcf8" }]}>
-              {hasVoted ? "Requested" : "Next Slide"}
+              {hasVoted ? "Requested" : "Next Slide, Please"}
             </Text>
             <Text
               style={[
@@ -398,8 +398,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 16,
   },
-  voteIconRow: { marginBottom: 12 },
-  voteIconAbsolute: { position: "absolute", top: 0, marginBottom: 0 },
+  voteIconContainer: { width: 20, height: 20, marginBottom: 12 },
+  voteIconLayer: { position: "absolute", top: 0, left: 0 },
   voteButtonText: {
     fontSize: 20,
     fontFamily: "PlusJakartaSans_700Bold",
