@@ -264,7 +264,7 @@ export default function PresenterScreen() {
   const handleShare = async () => {
     if (!code) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const message = `Join my presentation — enter code ${code} in the Slide Clicker app.`;
+    const message = `Join my presentation! Enter code ${code} in the Slide Clicker app.`;
     try {
       if (Platform.OS === "web") {
         if (typeof navigator !== "undefined" && navigator.share) {

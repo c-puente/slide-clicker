@@ -374,7 +374,7 @@ export default function AudienceScreen() {
                   <View style={styles.noteSentRow}>
                     <Feather name="check" size={13} color="#3d8a6e" />
                     <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>
-                      Note sent — write another or wait
+                      Note sent. Write another or wait
                     </Text>
                   </View>
                 ) : (

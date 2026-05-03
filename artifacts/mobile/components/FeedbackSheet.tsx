@@ -101,7 +101,7 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
           <View style={styles.doneRow}>
             <Ionicons name="checkmark-circle" size={22} color="#3d8a6e" />
             <Text style={[styles.doneText, { color: textPrimary }]}>
-              Thanks — your feedback helps a lot!
+              Thanks! Your feedback helps a lot.
             </Text>
           </View>
         ) : (
