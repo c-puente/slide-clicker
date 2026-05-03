@@ -78,17 +78,18 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
       statusBarTranslucent
       onRequestClose={doLeave}
     >
-      <Pressable style={styles.backdrop} onPress={doLeave} />
+      <View style={styles.outer}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={doLeave} />
 
-      <View
-        style={[
-          styles.sheet,
-          {
-            backgroundColor: bg,
-            paddingBottom: Math.max(insets.bottom + 4, 24),
-          },
-        ]}
-      >
+        <View
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: bg,
+              paddingBottom: Math.max(insets.bottom + 4, 24),
+            },
+          ]}
+        >
         <View style={[styles.handle, { backgroundColor: handleColor }]} />
 
         {done ? (
@@ -176,14 +177,16 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
             </Pressable>
           </>
         )}
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  outer: {
     flex: 1,
+    justifyContent: "flex-end",
   },
   sheet: {
     borderTopLeftRadius: 22,
