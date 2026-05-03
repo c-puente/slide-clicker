@@ -1,4 +1,4 @@
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign, Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as StoreReview from "expo-store-review";
 import React, { useState } from "react";
@@ -122,8 +122,8 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
                   hitSlop={8}
                   style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                 >
-                  <AntDesign
-                    name={s <= rating ? "star" : "staro"}
+                  <Ionicons
+                    name={s <= rating ? "star" : "star-outline"}
                     size={34}
                     color={s <= rating ? accent : isDark ? "#3a3530" : "#d4cfc8"}
                   />
