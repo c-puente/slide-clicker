@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSession } from "@/context/SessionContext";
+import { FeedbackSheet } from "@/components/FeedbackSheet";
 
 export default function AudienceScreen() {
   const {
@@ -41,6 +42,7 @@ export default function AudienceScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
   const [hasPrevVoted, setHasPrevVoted] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -193,7 +195,7 @@ export default function AudienceScreen() {
           {/* ── Top bar ── */}
           <View style={styles.topBar}>
             <Pressable
-              onPress={() => { leaveSession(); router.replace("/"); }}
+              onPress={() => setFeedbackVisible(true)}
               style={({ pressed }) => [styles.leaveBtn, { opacity: pressed ? 0.6 : 1 }]}
             >
               <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
@@ -449,6 +451,16 @@ export default function AudienceScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Feedback sheet ── */}
+      <FeedbackSheet
+        visible={feedbackVisible}
+        onLeave={() => {
+          setFeedbackVisible(false);
+          leaveSession();
+          router.replace("/");
+        }}
+      />
     </Animated.View>
   );
 }

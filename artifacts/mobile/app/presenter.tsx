@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSession } from "@/context/SessionContext";
 import type { Note, PresenceMember } from "@/context/SessionContext";
+import { FeedbackSheet } from "@/components/FeedbackSheet";
 
 // ── Note toast ───────────────────────────────────────────────────────────────
 function NoteToast({
@@ -258,6 +259,7 @@ export default function PresenterScreen() {
   const isDark = colorScheme === "dark";
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
 
   const handleShare = async () => {
     if (!code) return;
@@ -375,7 +377,7 @@ export default function PresenterScreen() {
         {/* ── Top bar ── */}
         <View style={styles.topBar}>
           <Pressable
-            onPress={() => { leaveSession(); router.replace("/"); }}
+            onPress={() => setFeedbackVisible(true)}
             style={({ pressed }) => [styles.leaveBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
             <Text style={[styles.leaveBtnText, { color: textSecondary }]}>Leave</Text>
@@ -573,6 +575,16 @@ export default function PresenterScreen() {
         onSetRoomLocked={setRoomLocked}
         onSetNotesDisabled={setNotesDisabled}
         onRemoveMember={removeMember}
+      />
+
+      {/* ── Feedback sheet ── */}
+      <FeedbackSheet
+        visible={feedbackVisible}
+        onLeave={() => {
+          setFeedbackVisible(false);
+          leaveSession();
+          router.replace("/");
+        }}
       />
     </Animated.View>
   );
