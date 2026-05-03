@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as StoreReview from "expo-store-review";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Keyboard,
   Modal,
   Pressable,
@@ -29,6 +30,7 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
   const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const bg = isDark ? "#1c1914" : "#fefcf8";
   const textPrimary = isDark ? "#ede9e1" : "#1a1612";
@@ -43,12 +45,14 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
     setRating(0);
     setText("");
     setDone(false);
+    setSubmitting(false);
     onLeave();
   };
 
   const submit = async () => {
-    if (rating === 0) return;
+    if (rating === 0 || submitting) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setSubmitting(true);
 
     try {
       await fetch(`${API_BASE}/api/feedback`, {
@@ -58,6 +62,7 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
       });
     } catch { }
 
+    setSubmitting(false);
     setDone(true);
 
     if (rating >= 4) {
@@ -94,7 +99,7 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
 
         {done ? (
           <View style={styles.doneRow}>
-            <AntDesign name="checkcircle" size={22} color="#3d8a6e" />
+            <Ionicons name="checkmark-circle" size={22} color="#3d8a6e" />
             <Text style={[styles.doneText, { color: textPrimary }]}>
               Thanks — your feedback helps a lot!
             </Text>
@@ -152,7 +157,7 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
 
             <Pressable
               onPress={submit}
-              disabled={rating === 0}
+              disabled={rating === 0 || submitting}
               style={({ pressed }) => [
                 styles.submitBtn,
                 {
@@ -166,14 +171,18 @@ export function FeedbackSheet({ visible, onLeave }: Props) {
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.submitText,
-                  { color: rating > 0 ? "#fefcf8" : textSecondary },
-                ]}
-              >
-                Submit
-              </Text>
+              {submitting ? (
+                <ActivityIndicator size="small" color="#fefcf8" />
+              ) : (
+                <Text
+                  style={[
+                    styles.submitText,
+                    { color: rating > 0 ? "#fefcf8" : textSecondary },
+                  ]}
+                >
+                  Submit
+                </Text>
+              )}
             </Pressable>
           </>
         )}
