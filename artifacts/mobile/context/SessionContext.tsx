@@ -41,8 +41,8 @@ interface SessionState {
 
 interface SessionActions {
   setName: (name: string) => void;
-  createSession: () => Promise<void>;
-  joinSession: (code: string) => Promise<void>;
+  createSession: () => void;
+  joinSession: (code: string) => void;
   voteNext: () => void;
   unvoteNext: () => void;
   votePrev: () => void;
@@ -287,17 +287,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem("slideclicker_name", name);
   }, []);
 
-  const createSession = useCallback(async () => {
+  const createSession = useCallback(() => {
     const name = state.name || "Presenter";
     connect(() => send({ type: "create_session", name }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
   }, [state.name, connect, send]);
 
   const joinSession = useCallback(
-    async (code: string) => {
+    (code: string) => {
       const name = state.name || "Audience";
       connect(() => send({ type: "join_session", code, name }));
-      await new Promise((resolve) => setTimeout(resolve, 0));
     },
     [state.name, connect, send],
   );
