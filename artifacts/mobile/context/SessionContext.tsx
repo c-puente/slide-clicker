@@ -41,8 +41,8 @@ interface SessionState {
 
 interface SessionActions {
   setName: (name: string) => void;
-  createSession: () => void;
-  joinSession: (code: string) => void;
+  createSession: () => Promise<void>;
+  joinSession: (code: string) => Promise<void>;
   voteNext: () => void;
   unvoteNext: () => void;
   votePrev: () => void;
@@ -121,10 +121,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connect = useCallback(
-    (onOpen: () => void) => {
+    (onOpen?: () => void) => {
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
+      }
+      if (flashTimeoutRef.current) {
+        clearTimeout(flashTimeoutRef.current);
+        flashTimeoutRef.current = null;
       }
 
       const ws = new WebSocket(WS_URL);
@@ -132,39 +136,51 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
       ws.onopen = () => {
         setState((s) => ({ ...s, connected: true, error: null }));
-        onOpen();
+        onOpen?.();
       };
 
       ws.onmessage = (event) => {
-        let msg: Record<string, unknown>;
-        try {
-          msg = JSON.parse(event.data as string) as Record<string, unknown>;
-        } catch {
-          return;
-        }
-
-        const type = msg["type"] as string;
+        const msg = JSON.parse(event.data as string) as { type: string; [key: string]: unknown };
+        const type = msg.type;
 
         if (type === "session_created") {
+          const code = msg["code"] as string;
+          const role = msg["role"] as Role;
+          const slideNumber = (msg["slideNumber"] as number) ?? 1;
+          const totalAudience = (msg["totalAudience"] as number) ?? 0;
           setState((s) => ({
             ...s,
-            code: msg["code"] as string,
-            role: "presenter",
-            slideNumber: (msg["slideNumber"] as number) ?? 1,
-            presence: (msg["presence"] as PresenceMember[]) ?? [],
+            code,
+            role,
+            slideNumber,
             voteCount: 0,
-            totalAudience: 0,
-            roomLocked: (msg["roomLocked"] as boolean) ?? false,
-            notesDisabled: (msg["notesDisabled"] as boolean) ?? false,
+            prevVoteCount: 0,
+            totalAudience,
+            presence: [],
+            connected: true,
+            error: null,
+            roomLocked: false,
+            notesDisabled: false,
           }));
         } else if (type === "session_joined") {
+          const code = msg["code"] as string;
+          const role = msg["role"] as Role;
+          const slideNumber = (msg["slideNumber"] as number) ?? 1;
+          const voteCount = (msg["voteCount"] as number) ?? 0;
+          const prevVoteCount = (msg["prevVoteCount"] as number) ?? 0;
+          const totalAudience = (msg["totalAudience"] as number) ?? 0;
+          const presence = (msg["presence"] as PresenceMember[]) ?? [];
           setState((s) => ({
             ...s,
-            code: msg["code"] as string,
-            role: "audience",
-            slideNumber: (msg["slideNumber"] as number) ?? 1,
-            presence: (msg["presence"] as PresenceMember[]) ?? [],
-            voteCount: 0,
+            code,
+            role,
+            slideNumber,
+            voteCount,
+            prevVoteCount,
+            totalAudience,
+            presence,
+            connected: true,
+            error: null,
             roomLocked: (msg["roomLocked"] as boolean) ?? false,
             notesDisabled: (msg["notesDisabled"] as boolean) ?? false,
           }));
@@ -190,6 +206,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             return {
               ...s,
               voteCount,
+              prevVoteCount: 0,
               totalAudience,
               triggerFlash: shouldFlash ? true : s.triggerFlash,
             };
@@ -197,6 +214,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         } else if (type === "prev_vote_update") {
           setState((s) => ({
             ...s,
+            voteCount: 0,
             prevVoteCount: (msg["prevVoteCount"] as number) ?? 0,
             totalAudience: (msg["totalAudience"] as number) ?? s.totalAudience,
           }));
@@ -269,15 +287,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem("slideclicker_name", name);
   }, []);
 
-  const createSession = useCallback(() => {
+  const createSession = useCallback(async () => {
     const name = state.name || "Presenter";
     connect(() => send({ type: "create_session", name }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }, [state.name, connect, send]);
 
   const joinSession = useCallback(
-    (code: string) => {
+    async (code: string) => {
       const name = state.name || "Audience";
       connect(() => send({ type: "join_session", code, name }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     },
     [state.name, connect, send],
   );

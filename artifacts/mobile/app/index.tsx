@@ -30,6 +30,7 @@ export default function HomeScreen() {
   const [joinCode, setJoinCode] = useState("");
   const [activeTab, setActiveTab] = useState<"presenter" | "audience">("presenter");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingRoute, setPendingRoute] = useState<"presenter" | "audience" | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -41,9 +42,11 @@ export default function HomeScreen() {
   useEffect(() => {
     if (code && role === "presenter") {
       setIsLoading(false);
+      setPendingRoute(null);
       router.replace("/presenter");
     } else if (code && role === "audience") {
       setIsLoading(false);
+      setPendingRoute(null);
       router.replace("/audience");
     }
   }, [code, role]);
@@ -108,23 +111,18 @@ export default function HomeScreen() {
             resizeMode="contain"
           />
           <Text style={[styles.wordmark, { color: textPrimary }]}>Next Slide, Please</Text>
-          <Text style={[styles.tagline, { color: textSecondary }]}>
-            Silent audience control for live talks
-          </Text>
+          <Text style={[styles.tagline, { color: textSecondary }]}>Silent audience control for live talks</Text>
         </View>
 
         <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
-          <View style={[styles.tabRow, { borderBottomColor: divider }]}>
-            <Pressable style={styles.tab} onPress={() => switchTab("presenter")}>
+          <View style={[styles.tabRow, { borderBottomColor: divider }]}> 
+            <Pressable style={styles.tab} onPress={() => switchTab("presenter")}> 
               <Text
                 style={[
                   styles.tabLabel,
                   {
                     color: activeTab === "presenter" ? accent : textSecondary,
-                    fontFamily:
-                      activeTab === "presenter"
-                        ? "PlusJakartaSans_600SemiBold"
-                        : "PlusJakartaSans_400Regular",
+                    fontFamily: activeTab === "presenter" ? "PlusJakartaSans_600SemiBold" : "PlusJakartaSans_400Regular",
                   },
                 ]}
               >
@@ -137,10 +135,7 @@ export default function HomeScreen() {
                   styles.tabLabel,
                   {
                     color: activeTab === "audience" ? accent : textSecondary,
-                    fontFamily:
-                      activeTab === "audience"
-                        ? "PlusJakartaSans_600SemiBold"
-                        : "PlusJakartaSans_400Regular",
+                    fontFamily: activeTab === "audience" ? "PlusJakartaSans_600SemiBold" : "PlusJakartaSans_400Regular",
                   },
                 ]}
               >
@@ -171,9 +166,7 @@ export default function HomeScreen() {
 
             {activeTab === "audience" && (
               <>
-                <Text style={[styles.fieldLabel, { color: textSecondary, marginTop: 18 }]}>
-                  Session code
-                </Text>
+                <Text style={[styles.fieldLabel, { color: textSecondary, marginTop: 18 }]}>Session code</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -211,15 +204,18 @@ export default function HomeScreen() {
                 clearError();
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setIsLoading(true);
-                activeTab === "presenter"
-                  ? createSession()
-                  : joinSession(joinCode.trim().toUpperCase());
+                setPendingRoute(activeTab);
+                if (activeTab === "presenter") {
+                  router.replace("/presenter");
+                  void createSession();
+                } else {
+                  router.replace("/audience");
+                  void joinSession(joinCode.trim().toUpperCase());
+                }
               }}
             >
-              <Text style={styles.primaryButtonText}>
-                {activeTab === "presenter" ? "Start Session" : "Join Session"}
-              </Text>
-              {isLoading ? (
+              <Text style={styles.primaryButtonText}>{activeTab === "presenter" ? "Start Session" : "Join Session"}</Text>
+              {isLoading || pendingRoute ? (
                 <ActivityIndicator size="small" color="#fefcf8" style={{ marginLeft: 10 }} />
               ) : (
                 <Feather name="arrow-right" size={16} color="#fefcf8" style={{ marginLeft: 8 }} />
@@ -240,107 +236,21 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: {
-    flex: 1,
-    paddingHorizontal: 28,
-    justifyContent: "center",
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 36,
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
-    marginBottom: 14,
-  },
-  wordmark: {
-    fontSize: 22,
-    fontFamily: "PlusJakartaSans_700Bold",
-    letterSpacing: -0.4,
-    textAlign: "center",
-    marginBottom: 5,
-  },
-  tagline: {
-    fontSize: 13,
-    fontFamily: "PlusJakartaSans_400Regular",
-    textAlign: "center",
-    lineHeight: 19,
-    letterSpacing: 0.1,
-  },
-  tabRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    marginBottom: 26,
-    position: "relative",
-  },
-  tab: {
-    flex: 1,
-    paddingBottom: 11,
-    alignItems: "center",
-  },
-  tabLabel: {
-    fontSize: 13,
-    letterSpacing: 0.1,
-  },
-  tabUnderline: {
-    position: "absolute",
-    bottom: -1,
-    width: "50%",
-    height: 2,
-    borderRadius: 1,
-  },
-  formBody: {},
-  fieldLabel: {
-    fontSize: 11,
-    fontFamily: "PlusJakartaSans_500Medium",
-    letterSpacing: 0.6,
-    marginBottom: 7,
-    textTransform: "uppercase",
-  },
-  input: {
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    fontFamily: "PlusJakartaSans_400Regular",
-    letterSpacing: 0.1,
-  },
-  codeInput: {
-    textAlign: "center",
-    fontSize: 26,
-    fontFamily: "PlusJakartaSans_800ExtraBold",
-    letterSpacing: 10,
-    height: 60,
-  },
-  errorText: {
-    color: "#c94040",
-    fontSize: 12,
-    fontFamily: "PlusJakartaSans_400Regular",
-    marginTop: 8,
-  },
-  primaryButton: {
-    height: 50,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    marginTop: 22,
-  },
-  primaryButtonText: {
-    color: "#fefcf8",
-    fontSize: 15,
-    fontFamily: "PlusJakartaSans_600SemiBold",
-    letterSpacing: 0.1,
-  },
-  hint: {
-    marginTop: 24,
-    fontSize: 12,
-    fontFamily: "PlusJakartaSans_400Regular",
-    lineHeight: 18,
-    textAlign: "center",
-    letterSpacing: 0.1,
-  },
+  container: { flex: 1, paddingHorizontal: 28, justifyContent: "center" },
+  header: { alignItems: "center", marginBottom: 36 },
+  logo: { width: 60, height: 60, borderRadius: 14, marginBottom: 14 },
+  wordmark: { fontSize: 22, fontFamily: "PlusJakartaSans_700Bold", letterSpacing: -0.4, textAlign: "center", marginBottom: 5 },
+  tagline: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", textAlign: "center", lineHeight: 19 },
+  tabRow: { flexDirection: "row", borderBottomWidth: 1, marginBottom: 22, position: "relative" },
+  tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
+  tabLabel: { fontSize: 14, letterSpacing: 0.1 },
+  tabUnderline: { position: "absolute", bottom: -1, left: 0, width: "50%", height: 2, borderRadius: 999 },
+  formBody: { gap: 10 },
+  fieldLabel: { fontSize: 12, fontFamily: "PlusJakartaSans_500Medium", letterSpacing: 0.1 },
+  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontFamily: "PlusJakartaSans_400Regular" },
+  codeInput: { textAlign: "center", letterSpacing: 5, fontSize: 18, fontFamily: "PlusJakartaSans_700Bold" },
+  errorText: { color: "#c94040", fontSize: 13, fontFamily: "PlusJakartaSans_500Medium" },
+  primaryButton: { height: 52, borderRadius: 14, marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  primaryButtonText: { color: "#fefcf8", fontSize: 16, fontFamily: "PlusJakartaSans_700Bold" },
+  hint: { marginTop: 18, fontSize: 12.5, fontFamily: "PlusJakartaSans_400Regular", textAlign: "center" },
 });

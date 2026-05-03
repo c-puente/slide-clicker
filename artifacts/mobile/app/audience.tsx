@@ -48,9 +48,13 @@ export default function AudienceScreen() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [briefSent, setBriefSent] = useState(false);
-
   const [noteCooldown, setNoteCooldown] = useState(false);
+  const [requestReminderVisible, setRequestReminderVisible] = useState(false);
+
   const notesSentRef = useRef(0);
+  const requestNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestReminderShownRef = useRef(false);
   const noteAnim = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(1)).current;
   const prevPressAnim = useRef(new Animated.Value(1)).current;
@@ -69,11 +73,59 @@ export default function AudienceScreen() {
   useEffect(() => {
     setHasVoted(false);
     setHasPrevVoted(false);
+    setRequestReminderVisible(false);
     Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
     Animated.timing(prevCheckAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
   }, [slideNumber]);
 
-  // Close note bar if presenter disables notes while it's open
+  useEffect(() => {
+    const hasRequest = hasVoted || hasPrevVoted;
+
+    if (!hasRequest) {
+      requestReminderShownRef.current = false;
+      setRequestReminderVisible(false);
+      if (requestNoticeTimeoutRef.current) {
+        clearTimeout(requestNoticeTimeoutRef.current);
+        requestNoticeTimeoutRef.current = null;
+      }
+      if (requestResetTimeoutRef.current) {
+        clearTimeout(requestResetTimeoutRef.current);
+        requestResetTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    if (!requestReminderShownRef.current) {
+      requestReminderShownRef.current = true;
+      requestNoticeTimeoutRef.current = setTimeout(() => {
+        setRequestReminderVisible(true);
+      }, 10_000);
+    }
+
+    if (!requestResetTimeoutRef.current) {
+      requestResetTimeoutRef.current = setTimeout(() => {
+        setHasVoted(false);
+        setHasPrevVoted(false);
+        setRequestReminderVisible(false);
+        unvoteNext();
+        unvotePrev();
+        Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
+        Animated.timing(prevCheckAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
+      }, 40_000);
+    }
+
+    return () => {
+      if (requestNoticeTimeoutRef.current) {
+        clearTimeout(requestNoticeTimeoutRef.current);
+        requestNoticeTimeoutRef.current = null;
+      }
+      if (requestResetTimeoutRef.current) {
+        clearTimeout(requestResetTimeoutRef.current);
+        requestResetTimeoutRef.current = null;
+      }
+    };
+  }, [hasVoted, hasPrevVoted, unvoteNext, unvotePrev, checkAnim, prevCheckAnim]);
+
   useEffect(() => {
     if (notesDisabled && noteOpen) {
       closeNoteBar();
@@ -131,11 +183,17 @@ export default function AudienceScreen() {
     if (hasPrevVoted) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setHasPrevVoted(false);
+      setRequestReminderVisible(false);
+      requestReminderShownRef.current = false;
+      if (requestNoticeTimeoutRef.current) clearTimeout(requestNoticeTimeoutRef.current);
+      if (requestResetTimeoutRef.current) clearTimeout(requestResetTimeoutRef.current);
       unvotePrev();
       Animated.timing(prevCheckAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setHasPrevVoted(true);
+      setHasVoted(false);
+      unvoteNext();
       votePrev();
       Animated.sequence([
         Animated.timing(prevPressAnim, { toValue: 0.97, duration: 80, useNativeDriver: false }),
@@ -149,11 +207,17 @@ export default function AudienceScreen() {
     if (hasVoted) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setHasVoted(false);
+      setRequestReminderVisible(false);
+      requestReminderShownRef.current = false;
+      if (requestNoticeTimeoutRef.current) clearTimeout(requestNoticeTimeoutRef.current);
+      if (requestResetTimeoutRef.current) clearTimeout(requestResetTimeoutRef.current);
       unvoteNext();
       Animated.timing(checkAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       setHasVoted(true);
+      setHasPrevVoted(false);
+      unvotePrev();
       voteNext();
       Animated.sequence([
         Animated.timing(pressAnim, { toValue: 0.96, duration: 80, useNativeDriver: false }),
@@ -175,7 +239,7 @@ export default function AudienceScreen() {
   const audienceMembers = presence.filter((p) => p.role === "audience");
 
   return (
-    <Animated.View style={[styles.flex, { backgroundColor: bg, opacity: fadeIn }]}>
+    <Animated.View style={[styles.flex, { backgroundColor: bg, opacity: fadeIn }]}> 
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -212,9 +276,7 @@ export default function AudienceScreen() {
 
             <View style={styles.countSlot}>
               <Feather name="users" size={13} color={textSecondary} />
-              <Text style={[styles.countText, { color: textSecondary }]}>
-                {audienceMembers.length}
-              </Text>
+              <Text style={[styles.countText, { color: textSecondary }]}>{audienceMembers.length}</Text>
             </View>
           </View>
 
@@ -231,9 +293,7 @@ export default function AudienceScreen() {
               style={[
                 styles.voteButton,
                 {
-                  backgroundColor: hasVoted
-                    ? isDark ? "#251f18" : "#f0ece4"
-                    : accent,
+                  backgroundColor: hasVoted ? (isDark ? "#251f18" : "#f0ece4") : accent,
                   borderColor: hasVoted ? accent : "transparent",
                   borderWidth: hasVoted ? 1.5 : 0,
                 },
@@ -244,16 +304,13 @@ export default function AudienceScreen() {
                   style={[
                     styles.voteIconLayer,
                     {
-                      opacity: checkAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [1, 0],
-                      }),
+                      opacity: checkAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
                     },
                   ]}
                 >
                   <Feather name="arrow-right" size={20} color="#fefcf8" />
                 </Animated.View>
-                <Animated.View style={[styles.voteIconLayer, { opacity: checkAnim }]}>
+                <Animated.View style={[styles.voteIconLayer, { opacity: checkAnim }]}> 
                   <Feather name="check" size={20} color={accent} />
                 </Animated.View>
               </View>
@@ -278,9 +335,7 @@ export default function AudienceScreen() {
               style={[
                 styles.prevVoteButton,
                 {
-                  backgroundColor: hasPrevVoted
-                    ? isDark ? "#1c1914" : "#f0ece4"
-                    : isDark ? "#1c1914" : "#fefcf8",
+                  backgroundColor: hasPrevVoted ? (isDark ? "#1c1914" : "#f0ece4") : isDark ? "#1c1914" : "#fefcf8",
                   borderColor: hasPrevVoted ? accent : isDark ? "rgba(237,233,225,0.12)" : "rgba(26,22,18,0.14)",
                 },
               ]}
@@ -290,10 +345,7 @@ export default function AudienceScreen() {
                   style={[
                     styles.prevVoteIconLayer,
                     {
-                      opacity: prevCheckAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [1, 0],
-                      }),
+                      opacity: prevCheckAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
                     },
                   ]}
                 >
@@ -303,11 +355,19 @@ export default function AudienceScreen() {
                   <Feather name="check" size={15} color={accent} />
                 </Animated.View>
               </View>
-              <Text style={[styles.prevVoteButtonText, { color: hasPrevVoted ? accent : textSecondary }]}>
+              <Text style={[styles.prevVoteButtonText, { color: hasPrevVoted ? accent : textSecondary }]}> 
                 {hasPrevVoted ? "Requested" : "Previous Slide, Please"}
               </Text>
             </Pressable>
           </Animated.View>
+
+          {requestReminderVisible && (
+            <View style={[styles.requestReminder, { backgroundColor: surface }]}> 
+              <Text style={[styles.requestReminderText, { color: textPrimary }]}> 
+                Your request is still active. Please unselect it once it has been handled.
+              </Text>
+            </View>
+          )}
 
           {/* ── Vote progress ── */}
           {totalAudience > 0 && (
@@ -328,7 +388,7 @@ export default function AudienceScreen() {
                   ]}
                 />
               </View>
-              <Text style={[styles.voteText, { color: textSecondary }]}>
+              <Text style={[styles.voteText, { color: textSecondary }]}> 
                 {voteCount} of {totalAudience} want to advance
               </Text>
             </View>
@@ -348,9 +408,7 @@ export default function AudienceScreen() {
             >
               <View style={styles.noteClosedRow}>
                 <Feather name="slash" size={13} color={textSecondary} />
-                <Text style={[styles.noteClosedText, { color: textSecondary }]}>
-                  Notes are disabled
-                </Text>
+                <Text style={[styles.noteClosedText, { color: textSecondary }]}>Notes are disabled</Text>
               </View>
             </View>
           ) : (
@@ -362,10 +420,7 @@ export default function AudienceScreen() {
                   borderColor: noteCooldown
                     ? isDark ? "rgba(237,233,225,0.06)" : "rgba(26,22,18,0.06)"
                     : noteOpen ? accent : inputBorder,
-                  height: noteAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [44, 126],
-                  }),
+                  height: noteAnim.interpolate({ inputRange: [0, 1], outputRange: [44, 126] }),
                 },
               ]}
             >
@@ -373,9 +428,7 @@ export default function AudienceScreen() {
                 briefSent ? (
                   <View style={styles.noteSentRow}>
                     <Feather name="check" size={13} color="#3d8a6e" />
-                    <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>
-                      Note sent. Write another or wait
-                    </Text>
+                    <Text style={[styles.noteSentText, { color: "#3d8a6e" }]}>Note sent. Write another or wait</Text>
                   </View>
                 ) : (
                   <>
@@ -398,9 +451,7 @@ export default function AudienceScreen() {
                         style={[
                           styles.noteSendBtn,
                           {
-                            backgroundColor: noteText.trim()
-                              ? accent
-                              : isDark ? "#3a3530" : "#e8e3db",
+                            backgroundColor: noteText.trim() ? accent : isDark ? "#3a3530" : "#e8e3db",
                           },
                         ]}
                       >
@@ -419,25 +470,20 @@ export default function AudienceScreen() {
               ) : noteCooldown ? (
                 <View style={styles.noteClosedRow}>
                   <Feather name="clock" size={13} color={textSecondary} />
-                  <Text style={[styles.noteClosedText, { color: textSecondary }]}>
-                    Please wait a moment…
-                  </Text>
+                  <Text style={[styles.noteClosedText, { color: textSecondary }]}>Please wait a moment…</Text>
                 </View>
               ) : (
                 <Pressable style={styles.noteClosedRow} onPress={toggleNote}>
                   <Feather name="message-square" size={13} color={textSecondary} />
-                  <Text style={[styles.noteClosedText, { color: textSecondary }]}>
-                    Note to presenter
-                  </Text>
+                  <Text style={[styles.noteClosedText, { color: textSecondary }]}>Note to presenter</Text>
                   <Feather name="chevron-up" size={13} color={textSecondary} />
                 </Pressable>
               )}
             </Animated.View>
           )}
 
-          {/* ── Audience chips ── */}
           {audienceMembers.length > 0 && (
-            <View style={[styles.memberRow, { borderTopColor: divider }]}>
+            <View style={[styles.memberRow, { borderTopColor: divider }]}> 
               {audienceMembers.map((m) => (
                 <View
                   key={m.id}
@@ -452,7 +498,6 @@ export default function AudienceScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ── Feedback sheet ── */}
       <FeedbackSheet
         visible={feedbackVisible}
         onLeave={() => {
@@ -478,79 +523,43 @@ const styles = StyleSheet.create({
   leaveBtnText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
   codePill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   codeValue: { fontSize: 16, fontFamily: "PlusJakartaSans_800ExtraBold", letterSpacing: 5 },
-  countSlot: {
-    flexDirection: "row", alignItems: "center",
-    gap: 5, minWidth: 36, justifyContent: "flex-end",
-  },
+  countSlot: { flexDirection: "row", alignItems: "center", gap: 5, minWidth: 36, justifyContent: "flex-end" },
   countText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular" },
   slideHero: { marginBottom: 22 },
   slideLabel: {
-    fontSize: 11, fontFamily: "PlusJakartaSans_500Medium",
-    letterSpacing: 1.8, textTransform: "uppercase", marginBottom: 4,
+    fontSize: 11, fontFamily: "PlusJakartaSans_500Medium", letterSpacing: 1.8, textTransform: "uppercase", marginBottom: 4,
   },
   slideNumber: {
-    fontSize: 76, fontFamily: "PlusJakartaSans_800ExtraBold",
-    lineHeight: 80, letterSpacing: -2.5,
+    fontSize: 76, fontFamily: "PlusJakartaSans_800ExtraBold", lineHeight: 80, letterSpacing: -2.5,
   },
-  voteButton: {
-    borderRadius: 14, alignItems: "center", justifyContent: "center",
-    paddingVertical: 34, paddingHorizontal: 24, marginBottom: 16,
-  },
+  voteButton: { borderRadius: 14, alignItems: "center", justifyContent: "center", paddingVertical: 34, paddingHorizontal: 24, marginBottom: 16 },
   voteIconContainer: { width: 20, height: 20, marginBottom: 12 },
   voteIconLayer: { position: "absolute", top: 0, left: 0 },
-  voteButtonText: {
-    fontSize: 20, fontFamily: "PlusJakartaSans_700Bold",
-    marginBottom: 4, letterSpacing: -0.3,
-  },
-  voteButtonSub: {
-    fontSize: 12, fontFamily: "PlusJakartaSans_400Regular",
-    textAlign: "center", letterSpacing: 0.1,
-  },
-  prevVoteButton: {
-    borderRadius: 12, borderWidth: 1.5,
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    paddingVertical: 13, paddingHorizontal: 20, gap: 8,
-  },
+  voteButtonText: { fontSize: 20, fontFamily: "PlusJakartaSans_700Bold", marginBottom: 4, letterSpacing: -0.3 },
+  voteButtonSub: { fontSize: 12, fontFamily: "PlusJakartaSans_400Regular", textAlign: "center", letterSpacing: 0.1 },
+  prevVoteButton: { borderRadius: 12, borderWidth: 1.5, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 13, paddingHorizontal: 20, gap: 8 },
   prevVoteIconContainer: { width: 15, height: 15 },
   prevVoteIconLayer: { position: "absolute", top: 0, left: 0 },
-  prevVoteButtonText: {
-    fontSize: 14, fontFamily: "PlusJakartaSans_600SemiBold", letterSpacing: 0.1,
-  },
+  prevVoteButtonText: { fontSize: 14, fontFamily: "PlusJakartaSans_600SemiBold", letterSpacing: 0.1 },
+  requestReminder: { marginBottom: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  requestReminderText: { fontSize: 13, fontFamily: "PlusJakartaSans_500Medium", letterSpacing: 0.1, textAlign: "center" },
   voteStatus: { marginBottom: 16, gap: 7 },
   progressTrack: { height: 3, borderRadius: 2, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
   voteText: { fontSize: 11, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
-  noteBar: {
-    borderRadius: 10, borderWidth: 1, marginBottom: 14,
-    overflow: "hidden", paddingHorizontal: 13, paddingVertical: 7,
-    justifyContent: "center",
-  },
+  noteBar: { borderRadius: 10, borderWidth: 1, marginBottom: 14, overflow: "hidden", paddingHorizontal: 13, paddingVertical: 7, justifyContent: "center" },
   noteClosedRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   noteClosedText: { flex: 1, fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
-  noteInput: {
-    fontSize: 13, fontFamily: "PlusJakartaSans_400Regular",
-    minHeight: 48, textAlignVertical: "top",
-    marginBottom: 6, paddingTop: 4, letterSpacing: 0.1,
-  },
-  noteActions: {
-    flexDirection: "row", justifyContent: "flex-end",
-    alignItems: "center", gap: 8,
-  },
-  noteCancelBtn: { paddingHorizontal: 10, paddingVertical: 5 },
-  noteCancelText: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular" },
-  noteSendBtn: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 7 },
+  noteInput: { fontSize: 13, fontFamily: "PlusJakartaSans_400Regular", minHeight: 48, textAlignVertical: "top", marginBottom: 6, paddingTop: 4, letterSpacing: 0.1 },
+  noteActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8 },
+  noteCancelBtn: { paddingHorizontal: 12, paddingVertical: 10 },
+  noteCancelText: { fontSize: 13, fontFamily: "PlusJakartaSans_500Medium" },
+  noteSendBtn: { borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10 },
   noteSendText: { fontSize: 13, fontFamily: "PlusJakartaSans_600SemiBold" },
-  noteSentRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  noteSentRow: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44 },
   noteSentText: { fontSize: 13, fontFamily: "PlusJakartaSans_500Medium" },
-  memberRow: {
-    borderTopWidth: 1, paddingTop: 14,
-    flexDirection: "row", flexWrap: "wrap", gap: 8,
-  },
-  memberChip: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 6, gap: 6,
-  },
-  memberDot: { width: 6, height: 6, borderRadius: 3 },
-  memberName: { fontSize: 12, fontFamily: "PlusJakartaSans_400Regular", letterSpacing: 0.1 },
+  memberRow: { marginTop: 8, paddingTop: 10, borderTopWidth: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  memberChip: { flexDirection: "row", alignItems: "center", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, gap: 6 },
+  memberDot: { width: 8, height: 8, borderRadius: 999 },
+  memberName: { fontSize: 12, fontFamily: "PlusJakartaSans_500Medium" },
 });
